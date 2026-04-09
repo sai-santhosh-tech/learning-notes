@@ -1,0 +1,240 @@
+🔹 Java Heap Structure
+
+Heap is divided into:
+
+Young Generation
+   ├── Eden Space
+   ├── Survivor Space S0
+   └── Survivor Space S1
+
+Old Generation (Tenured)
+
+🔹 1. MINOR GC (Young Generation GC)
+👉 Definition: Minor GC cleans Young Generation (Eden + Survivor spaces)
+
+🔸 How Objects Flow (Step-by-Step)
+
+Step 1: Object Creation
+Student s1 = new Student();
+👉 Object is created in Eden Space
+
+Step 2: EDEN Gets Full → Minor GC Triggered
+
+🔸 What Happens During Minor GC?
+a) JVM checks which objects are still alive (reachable)
+b) Alive objects are moved to Survivor Space (S0 or S1)
+c) Dead objects are removed
+
+Example Flow
+Before GC:
+Eden:      A, B, C, D
+S0:        empty
+S1:        empty
+
+Assume:
+A, C → still used
+B, D → not used
+
+After Minor GC:
+Eden:      empty
+S0:        A, C   (moved here)
+S1:        empty
+👉 B and D are removed
+
+
+🔸 Next Cycle => Next Minor GC:
+
+Alive objects move from S0 → S1
+Then S1 → S0 (alternates)
+
+👉 This is called copying algorithm
+
+
+🔸 PROMOTION to OLD Generation
+Each object has an age counter
+👉 If object survives multiple GC cycles:
+➡️ It moves to Old Generation (Tenured)
+
+🔹 Key Points of Minor GC
+Fast ⚡
+Happens frequently
+Works only in Young Generation
+Uses Copying Algorithm
+
+🔹 2. MAJOR GC (Old Generation GC)
+👉 Definition: Major GC cleans Old Generation
+
+🔸 When Major GC Happens?
+Old Generation is full Or JVM decides memory is low
+
+Example
+Old Gen: A, B, C, D, E
+
+Assume: B, D are not used
+
+After Major GC:
+Old Gen: A, C, E
+👉 Memory is compacted
+
+🔹 Key Points of Major GC
+Slow 🐢 (compared to Minor GC)
+Happens less frequently
+Can cause Stop-The-World pause
+Uses Mark-Sweep-Compact algorithm
+
+
+🔥 Minor GC vs Major GC
+| Feature   | Minor GC         | Major GC           |
+| --------- | ---------------- | ------------------ |
+| Area      | Young Generation | Old Generation     |
+| Speed     | Fast ⚡           | Slow 🐢            |
+| Frequency | Frequent         | Rare               |
+| Algorithm | Copying          | Mark-Sweep-Compact |
+| Impact    | Low pause        | High pause (STW)   |
+
+
+🔹 How Minor GC Actually Works
+👉 Step 1: Start from GC Roots
+Just like any GC, JVM first finds reachable (alive) objects
+So yes — there is still a marking concept internally, but not a full Mark-Sweep process.
+
+👉 Step 2: Copy Only Alive Objects
+
+Instead of removing dead objects one by one:
+👉 JVM copies only alive objects from: Eden to One Survivor space
+👉 Step 3: Drop the Entire Eden Space
+
+After copying:
+👉 JVM simply clears the whole Eden memory block
+
+So:
+No need to individually delete dead objects ❌
+Dead objects are just left behind and ignored
+
+MAJOR USES Mark-Sweep-Compact Algorithm
+Mark => Identify reachable objects
+Sweep => Remove unreachable objects
+Compact => Defragment memory
+
+
+🔹 How GC DECIDES WHICH OBJECTS TO CLEAN?
+Java GC works based on reachability, not just “unused variables”.
+
+👉 Core concept: Reachability Analysis
+GC starts from a set of GC ROOTS and checks which objects are still reachable.
+
+📌 What are GC Roots?
+Examples:
+Local variables in stack
+Active threads
+Static variables
+JNI references
+
+📌 Process (Step-by-step)
+Start from GC Roots
+Traverse object references (graph traversal)
+Mark all reachable objects as alive
+Remaining objects → unreachable = eligible for GC
+
+
+JAVA 8 :
+
+Before Java 8, Java used PermGen to store class metadata inside heap, which had fixed size and often caused OutOfMemoryError.
+After Java 8, PermGen was replaced by Metaspace, which uses native memory and grows dynamically, improving memory management and reducing GC issues.
+The core GC process (mark-sweep-compact) remains the same, but performance and tuning became better.
+
+⚠️ Problems with PermGen
+Fixed size → OutOfMemoryError: PermGen space
+Difficult to tune
+Class metadata tied to heap → inefficient memory usage
+
+
+🔹 1. GC Improvements After Java 8 (Better Defaults)
+✅ What changed?
+Earlier JVMs (before Java 8 era improvements):
+
+Default GC was PARALLEL GC
+Focus was mainly on throughput (speed)
+❗ Problem: Long Stop-The-World (STW) pauses
+
+
+🔸 Parallel GC Improvements
+👉 Parallel GC = multiple threads for GC
+
+Before improvements:
+Fast overall
+But long pause times (bad for real-time apps)
+
+Improvements:
+Better thread utilization
+Improved memory management
+Reduced pause time compared to older versions
+
+👉 Still: Not ideal for applications needing low latency
+
+
+🔹 2. New Generation GC (Post Java 8 Evolution)
+🔥 G1 Garbage Collector (G1 GC) => Became default GC in modern Java (Java 9+)
+
+🔹 Why G1 GC was introduced?
+
+Problems with older GCs:
+a) Long pause times
+b) Poor performance on large heaps (GBs of memory)
+👉 G1 solves this
+
+🔹 Key Concept: Region-Based Heap
+
+✅ G1 approach:
+
+Heap is divided into small equal regions
+
+[Region1][Region2][Region3]...[RegionN]
+
+👉 Each region can be:
+Eden
+Survivor
+Old
+
+🔹 How G1 Works (Simple)
+JVM tracks which regions have most garbage
+Picks those regions first
+Cleans them
+
+👉 That’s why name = Garbage First
+
+🔹 Predictable Pause Time (Big Advantage)
+👉 You can configure: MaxGCPauseMillis = 200ms (example)
+👉 G1 tries to meet this target
+
+🔹 Example
+
+Assume heap has 100 regions
+20 regions = mostly garbage
+80 regions = active objects
+
+👉 G1 will clean:
+Only 20 regions first
+Instead of scanning whole heap ❌
+
+
+🔹 Why G1 is Better for Large Applications
+✅ Advantages:
+a) Predictable pause times
+b) Works well with large heaps (multi-GB)
+c) Less fragmentation
+d) Better memory utilization
+e) Parallel + Concurrent
+
+
+🔹 Real-Life Analogy
+
+Old GC (Parallel / CMS)
+👉 Clean entire house 🏠
+a) Takes time
+b) Causes delay
+
+G1 GC
+👉 Clean only dirty rooms first 🧹
+a) Faster
+b)Controlled cleaning time
