@@ -238,3 +238,66 @@ G1 GC
 👉 Clean only dirty rooms first 🧹
 a) Faster
 b)Controlled cleaning time
+
+HOW DO YOY ENSURE GARABAGE COLLECTION IS WORKING CORRECTLY ?
+🔹 1. First Clarify: What does “GC working correctly” mean?
+It means:
+✅ Memory is getting reclaimed
+✅ No continuous memory growth
+✅ No frequent long pauses
+✅ No OutOfMemoryError
+
+🔹 2. Enable GC Logs (Most Important)
+👉 This is the primary way to verify GC
+
+For modern Java (Java 9+):
+-Xlog:gc*
+🔸 Example GC Log
+[GC (Allocation Failure)  256M->64M(512M), 0.005 secs]
+👉 Meaning:
+Before GC → 256MB used
+After GC → 64MB used ✅
+Heap size → 512MB
+
+🔥 How to Interpret
+✅ Good GC: 500MB → 100MB
+👉 Memory reclaimed → GC working fine
+
+❌ Bad GC: 500MB → 480MB
+👉 Very little memory freed → possible issue
+
+🔹 3. Monitor Heap Usage (Visual Tools)
+
+Use tools like:
+JVisualVM
+JConsole
+
+🔸 What to Check in Graphs
+Healthy Pattern (Very Important)
+Memory ↑ (allocations)
+Memory ↓ (after GC)
+Memory ↑
+Memory ↓
+👉 Looks like a saw-tooth pattern ✔️
+
+Problem Pattern
+Memory ↑
+Memory ↑
+Memory ↑
+(No drop after GC)
+👉 Indicates:
+❌ Memory leak or GC not effective
+
+🔹 4. Check GC Frequency & Pause Time
+✅ Healthy:
+Minor GC → frequent, fast (<50ms)
+Major GC → rare
+
+👉 We ensure GC is working correctly by enabling GC logs, monitoring heap usage patterns (saw-tooth), checking GC pause times and frequency, and analyzing heap dumps if memory is not reclaimed properly.
+
+🔹 Simple Checklist
+✔ GC logs show memory reduction
+✔ Heap graph goes up & down
+✔ No continuous growth
+✔ No long pauses
+✔ No OutOfMemoryError
