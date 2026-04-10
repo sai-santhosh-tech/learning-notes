@@ -293,6 +293,24 @@ Memory ↑
 Minor GC → frequent, fast (<50ms)
 Major GC → rare
 
+🔹 5. Use JVM Metrics
+
+Track:
+Heap usage %
+GC count
+GC pause time
+
+Tools:
+Prometheus + Grafana
+Micrometer
+
+Key Indicators
+| Metric        | Healthy     | Problem             |
+| ------------- | ----------- | ------------------- |
+| Heap usage    | Fluctuating | Always increasing ❌ |
+| GC pause time | Low         | High ❌              |
+| GC frequency  | Balanced    | Too frequent ❌      |
+
 👉 We ensure GC is working correctly by enabling GC logs, monitoring heap usage patterns (saw-tooth), checking GC pause times and frequency, and analyzing heap dumps if memory is not reclaimed properly.
 
 🔹 Simple Checklist
