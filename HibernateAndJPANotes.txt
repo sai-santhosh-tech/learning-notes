@@ -1,0 +1,205 @@
+1) Differenec between Entity Type and Value Type
+   Entity Type = "Independent object with identity" → @Entity (Must have an @Id,  Stored in a separate table)
+   Value Type = "Part of another object, no ID" → @Embeddable, used with @Embedded (Does not have an @Id, Stored in the same table as the owning entity)
+   
+ 
+2) What are the inheritance strategies in JPA?
+JPA provides 3 strategies:
+SINGLE_TABLE (default): One table for all classes.
+JOINED: Parent and child in separate tables.
+TABLE_PER_CLASS: Each class has its own table.
+
+	✅ 1. SINGLE_TABLE (Default Strategy)
+	🧩 Use Case: Best when all subclasses share most fields, and performance is a priority.
+	✅ 2. JOINED
+	🧩 Use Case: Suitable when subclasses have distinct fields, and you prefer normalized.
+	✅ 3. TABLE_PER_CLASS
+	🧩 Use Case: Use when subclasses are completely independent and rarely queried polymorphically.
+		@Entity
+		@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+		class Payment { ... }
+
+		@Entity
+		class CreditCardPayment extends Payment { private String cardNumber; }
+
+		@Entity
+		class CashPayment extends Payment { private String currency; }
+
+case:
+Department → Employee is a OneToMany relationship
+This is association mapping, not inheritance
+
+So even if you write:
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+👉 It will NOT merge Department and Employee into one table
+
+What actually happens
+You’ll still get 2 tables: Department table and Employee table
+When SINGLE_TABLE is used
+
+It works like this:
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "type")
+class Employee { }
+
+@Entity
+class FullTimeEmployee extends Employee { }
+
+@Entity
+class PartTimeEmployee extends Employee { }
+👉 Now all these classes share ONE table
+EMPLOYEE
+-----------
+id
+name
+salary
+hourlyRate
+type   (discriminator)
+
+Key takeaway
+@Inheritance → IS-A relationship (Parent ↔ Child classes)
+@OneToMany → HAS-A relationship (Department ↔ Employees)
+👉 These are completely different mechanisms in JPA
+
+
+3) N + 1 PROBLEM 
+
+The N+1 problem is one of the most common performance issues in JPA/Hibernate. Let’s break it down clearly.
+
+
+🔴 What is the N+1 problem?
+
+👉 It happens when:
+You run 1 query to fetch parent data
+Then N additional queries are executed to fetch related child data
+So total queries = 1 + N
+
+🧱 Example
+
+class Department {
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
+    List<Employee> employees;
+}
+
+class Employee {
+    Department department;
+}
+
+🔍 What actually happens
+Step 1: Fetch all departments  => List<Department> departments = departmentRepository.findAll();
+
+👉 SQL: SELECT * FROM department;
+
+Assume you get 3 departments
+
+Step 2: Access employees
+for (Department d : departments) {
+    System.out.println(d.getEmployees());
+}
+
+👉 Now Hibernate fires one query per department
+SELECT * FROM employee WHERE department_id = 1;
+SELECT * FROM employee WHERE department_id = 2;
+SELECT * FROM employee WHERE department_id = 3;
+
+❗ Total queries
+1 (for departments)
+3 (for employees)
+
+👉 Total = 4 queries (N+1 problem)
+
+If N = 100 → 101 queries 😬
+
+🧠 Why this happens?
+
+Because of => fetch = FetchType.LAZY
+👉 Hibernate loads employees only when accessed, causing multiple 
+
+✅ How to fix N+1 problem
+✔️ 1. Use JOIN FETCH (best and most common)
+
+@Query("SELECT d FROM Department d JOIN FETCH d.employees")
+List<Department> findAllWithEmployees();
+
+👉 SQL:
+SELECT d.*, e.*
+FROM department d
+JOIN employee e ON d.id = e.department_id;
+👉 Only 1 query
+
+✔️ 2. Use EntityGraph
+
+class Department {
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
+    List<Employee> employees;
+}
+
+@EntityGraph(attributePaths = "employees")
+List<Department> findAll();
+
+👉 You are redeclaring the findAll() method from JpaRepository
+
+🔍 So is it overriding?
+
+✔️ Technically: Yes (method override in interface)
+✔️ Functionally: Same method + extra fetch instruction
+⚙️ What changes internally
+
+Without @EntityGraph:
+SELECT * FROM department;
+-- then N queries for employees (LAZY → N+1)
+
+With @EntityGraph:
+SELECT d.*, e.*
+FROM department d
+LEFT JOIN employee e ON d.id = e.department_id;
+👉 Hibernate treats it like a JOIN FETCH
+
+✔️ 3. Batch fetching (Hibernate optimization)
+spring.jpa.properties.hibernate.default_batch_fetch_size=10
+
+👉 Reduces queries (not eliminates)
+
+
+
+Let me correct one key thing first:
+
+👉 EAGER loading is NOT reliable for solving N+1
+
+🧠 What actually happens
+Case 1: Using findById() (simple case)
+Department d = departmentRepository.findById(1).get();
+👉 Hibernate may generate a JOIN:
+
+SELECT d.*, e.*
+FROM department d
+LEFT JOIN employee e ON d.id = e.department_id
+WHERE d.id = 1;
+
+✅ Works as expected (single query)
+
+❗ Case 2: Using findAll() (very important)
+List<Department> departments = departmentRepository.findAll();
+Even with => @OneToMany(fetch = FetchType.EAGER)
+👉 Hibernate often does this:
+-- First query
+SELECT * FROM department;
+
+-- Then N queries
+SELECT * FROM employee WHERE department_id = 1;
+SELECT * FROM employee WHERE department_id = 2;
+SELECT * FROM employee WHERE department_id = 3;
+❌ Still N+1 problem
+
+😮 Why does this happen?
+
+Because:
+👉 EAGER = "load immediately"
+❌ NOT = "load using JOIN"
+
+Hibernate decides:
+Sometimes JOIN
+Sometimes separate queries
+👉 It’s implementation-dependent, not guaranteed
+
