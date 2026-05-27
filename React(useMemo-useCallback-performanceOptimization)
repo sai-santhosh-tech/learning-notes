@@ -1,0 +1,462 @@
+1) useMemo()
+Why useMemo is needed
+
+Normally, when a component re-renders:
+
+All calculations inside component execute again.
+
+Sometimes calculations are expensive:
+
+Sorting huge lists
+Filtering large data
+Complex computations
+
+useMemo() avoids recalculating unnecessarily.
+
+Example Without useMemo =>
+function App() {
+  const [count, setCount] = useState(0);
+
+  const expensiveValue = heavyCalculation();
+
+  return (
+    <>
+      <h1>{count}</h1>
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+    </>
+  );
+}
+
+Problem:
+a) heavyCalculation() runs every time component renders
+b) Even if calculation result never changes
+
+
+Example With useMemo =>
+import { useMemo, useState } from "react";
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  const expensiveValue = useMemo(() => {
+    return heavyCalculation();
+  }, []);
+
+  return (
+    <>
+      <h1>{count}</h1>
+
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+    </>
+  );
+}
+
+Now:
+a) heavyCalculation() runs only once
+b) Re-renders won’t recalculate it
+
+Dependency Example =>
+const filteredUsers = useMemo(() => {
+   return users.filter(user => user.active);
+}, [users]);
+
+Meaning:
+Recalculate only when users changes
+
+Real-Time Use Cases
+
+Use useMemo() for:
+1) Filtering large lists
+2) Sorting data
+3) Expensive computations
+4) Derived state calculations
+5) Preventing unnecessary child renders
+
+Simple Interview Definition
+
+“useMemo is a React Hook used to cache the result of expensive computations and recompute them only when dependencies change, helping to improve rendering performance.”
+
+
+2) React.memo()
+
+a) Why React.memo is needed
+
+Normally in React:
+When parent component re-renders,
+All child components also re-render by default.
+
+Even if child props are unchanged.
+This can affect performance in large applications.
+
+React.memo() solves this problem.
+
+
+b) Example Without React.memo =>
+
+import React, { useState } from "react";
+
+function Child() {
+   console.log("Child Rendered");
+
+   return <h1>Child Component</h1>;
+}
+
+function Parent() {
+
+   const [count, setCount] = useState(0);
+
+   return (
+      <>
+         <h1>{count}</h1>
+
+         <button onClick={() => setCount(count + 1)}>
+            Increment
+         </button>
+
+         <Child />
+      </>
+   );
+}
+
+What happens?
+
+Whenever button clicked:
+Parent re-renders
+Child also re-renders
+Even though Child data never changed.
+
+Example With React.memo
+import React, { useState } from "react";
+
+const Child = React.memo(() => {
+
+   console.log("Child Rendered");
+
+   return <h1>Child Component</h1>;
+});
+
+function Parent() {
+
+   const [count, setCount] = useState(0);
+
+   return (
+      <>
+         <h1>{count}</h1>
+
+         <button onClick={() => setCount(count + 1)}>
+            Increment
+         </button>
+
+         <Child />
+      </>
+   );
+}
+
+Now What Happens?
+
+When button clicked:
+Parent re-renders
+Child does NOT re-render
+
+Because:
+Props are same
+React.memo caches previous render
+
+Important Point
+
+React.memo() works by comparing props between renders.
+By default, it does a shallow comparison of props.
+
+Meaning:
+Primitive values compare by value
+Objects/functions compare by reference
+
+Real-Time Use Cases
+
+Use React.memo for:
+a) Large UI components
+b) Tables
+c) Charts
+d) Frequently re-rendering parents
+e) Expensive child rendering
+
+React.memo() only works for: Functional components
+Equivalent for class component: PureComponent
+
+Simple Interview Definition
+“React.memo is a Higher Order Component used to prevent unnecessary re-rendering of functional components by memoizing the rendered output when props remain unchanged.”
+
+
+React.memo is a specialized HOC provided by React for performance optimization.
+const MemoizedComponent = React.memo(MyComponent);
+What enhancement does React.memo add?
+It adds:
+memoization
+prevents unnecessary re-renders
+So the returned component only re-renders when props change.
+
+
+Main Difference
+| Feature  | React.memo()         | useMemo()             |
+| -------- | -------------------- | --------------------- |
+| Used for | Component            | Value / Calculation   |
+| Prevents | Component re-render  | Recalculation         |
+| Works on | Functional component | Expensive computation |
+| Returns  | Memoized component   | Memoized value        |
+
+
+3) usecallback()
+
+Why useCallback is needed
+
+In React:
+const handleClick = () => {
+   console.log("clicked");
+}
+This function gets recreated every time component re-renders.
+
+Normally this is fine, but it becomes a problem when:
+Function is passed to child components
+Child components use React.memo
+Frequent re-renders happen
+
+Problem Without useCallback =>
+
+import React, { useState } from "react";
+
+const Child = React.memo(({ onClick }) => {
+  console.log("Child Rendered");
+
+  return <button onClick={onClick}>Click</button>;
+});
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = () => {
+    console.log("Button clicked");
+  };
+
+  return (
+    <>
+      <h1>{count}</h1>
+
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+
+      <Child onClick={handleClick} />
+    </>
+  );
+}
+What happens here?
+
+When count changes:
+a) Parent component re-renders
+b) handleClick function recreated
+c) Child gets new function reference
+d) Child re-renders unnecessarily
+
+Even though logic is same.
+
+Solution Using useCallback =>
+
+import React, { useState, useCallback } from "react";
+
+const Child = React.memo(({ onClick }) => {
+  console.log("Child Rendered");
+
+  return <button onClick={onClick}>Click</button>;
+});
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = useCallback(() => {
+    console.log("Button clicked");
+  }, []);
+
+  return (
+    <>
+      <h1>{count}</h1>
+
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+
+      <Child onClick={handleClick} />
+    </>
+  );
+}
+
+Now What Happens?
+
+When count changes:
+
+a) Parent re-renders
+b) handleClick reference stays same
+c) Child does NOT re-render unnecessarily
+
+
+Syntax
+const memoizedFunction = useCallback(() => {
+   // logic
+}, [dependencies]);
+
+Function recreated only when dependencies change.
+
+
+Real-Time Use Cases
+
+Use useCallback() when:
+
+Passing functions to child components
+Using React.memo
+Preventing unnecessary renders
+Optimizing large applications
+
+Important Interview Point =>
+
+useCallback does NOT stop component re-rendering by itself.
+It only: Keeps same function reference between renders.
+Usually combined with: React.memo
+
+Difference useMemo & useCallback
+
+useMemo => Memoizes a value
+
+const sortedList = useMemo(() => {
+  return items.sort();
+}, [items]);
+
+Here: sortedList is a memoized VALUE
+
+useCallback => Memoizes a function
+
+const handleClick = useCallback(() => {
+  console.log("clicked");
+}, []);
+
+Here: handleClick is a memoized FUNCTION
+
+Easy Way to Remember
+useMemo     -> memoized result/value
+useCallback -> memoized function
+
+
+4) REACT APP PERFORMANCE OPTIMIZATION TECHIQUES
+
+Performance improves.
+In a React application, optimization mainly focuses on:
+
+Faster rendering
+Reduced unnecessary re-renders
+Smaller bundle size
+Better API handling
+Improved user experience
+
+Here are the important React app optimizations commonly discussed in interviews:
+
+1. Component Re-render Optimization
+Use React.memo()
+
+Prevents unnecessary re-rendering of functional components when props don’t change.
+
+const User = React.memo(({name}) => {
+  return <h1>{name}</h1>
+})
+
+Use when:
+Component renders frequently
+Props rarely change
+
+Use useMemo()
+
+Memoizes expensive calculations.
+
+const sortedList = useMemo(() => {
+   return users.sort();
+}, [users]);
+
+Prevents recalculating on every render.
+
+Use useCallback()
+
+Memoizes functions.
+
+const handleClick = useCallback(() => {
+   fetchData();
+}, []);
+
+Useful when passing functions to child components.
+
+
+2. Code Splitting / Lazy Loading
+
+Instead of loading the entire app initially, load components only when needed.
+
+const Dashboard = React.lazy(() => import('./Dashboard'));
+<Suspense fallback={<div>Loading...</div>}>
+   <Dashboard />
+</Suspense>
+
+Benefits:
+
+Faster initial page load
+Reduced bundle size
+
+3. Bundle Size Optimization
+Remove unused libraries
+Avoid heavy libraries if lighter alternatives exist.
+
+Example:
+Use native JS methods instead of large utility libraries when possible.
+
+
+4. State Management Optimization
+Avoid unnecessary global state
+Keep state local whenever possible.
+
+Bad: Storing every UI field in Redux/Context
+Good: Use component state for local UI data
+
+
+5) Caching
+
+Use libraries like:
+React Query
+SWR
+
+Benefits:
+API caching
+Background refresh
+Reduced network calls
+
+6) Pagination Instead of Large Data Loading
+
+Instead of loading 10,000 records:
+Use pagination
+Infinite scrolling
+
+Improves:
+Rendering performance
+API response time
+
+7) Use CDN & Browser Caching
+Static assets caching
+CDN for images/scripts
+
+Improves loading speed globally.
+
+8) 10. Production Build Optimization
+
+Use: npm run build
+
+Production build:
+Minifies JS
+Removes unused code
+Improves performance
