@@ -460,3 +460,22 @@ Production build:
 Minifies JS
 Removes unused code
 Improves performance
+
+
+Difference between commands
+| Command         | Purpose                                  |
+| --------------- | ---------------------------------------- |
+| `npm start`     | Runs app in development mode             |
+| `npm run build` | Creates production-ready optimized files |
+| `npm test`      | Runs tests                               |
+
+
+build is not a special npm command by itself.
+It only works if "build" exists in package.json.
+Example:
+
+"scripts": {
+  "build": "vite build"
+}
+Then npm run build executes:
+vite build
