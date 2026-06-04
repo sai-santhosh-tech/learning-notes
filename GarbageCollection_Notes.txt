@@ -319,3 +319,40 @@ Key Indicators
 ✔ No continuous growth
 ✔ No long pauses
 ✔ No OutOfMemoryError
+
+
+Types of Garbage Collectors in Java
+
+
+1. Serial Garbage Collector
+Uses a single thread for garbage collection.
+Suitable for small applications and single-core environments.
+Causes Stop-The-World (STW) pauses.
+
+2. Parallel Garbage Collector (Throughput GC)
+Uses multiple threads for GC.
+Focuses on maximizing application throughput.
+Default GC in Java 8.
+
+
+3. G1 Garbage Collector (Garbage First)
+Default GC since Java 9.
+Divides heap into multiple regions.
+Prioritizes collecting regions with the most garbage first.
+
+4. Z Garbage Collector (ZGC)
+Designed for very low latency.
+Handles huge heaps (TBs of memory).
+Pause times are typically less than a few milliseconds.
+
+
+Which GC Should You Use?
+
+| GC            | Best For                                |
+| ------------- | --------------------------------------- |
+| Serial GC     | Small applications                      |
+| Parallel GC   | Maximum throughput                      |
+| G1 GC         | General-purpose enterprise applications |
+| ZGC           | Very low latency, large heaps           |
+| Shenandoah GC | Low-latency applications                |
+
