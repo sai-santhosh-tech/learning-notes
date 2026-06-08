@@ -1,0 +1,95 @@
+1) Find the 3rd heighest salary
+
+Using subquery :- select max(salary) from employees where salary < (select max(salary) from employees where salary < (select max(salary) from employees));
+Using limit & offset :- Select name, salary from employees order by salary desc limit 1 offset 2;
+Using limit :- select name, salary from employees order by salary desc limit 2, 1;
+
+
+2) Display the heighest salary in each department
+
+Select max(salary),department_no from employee group by department_no;
+
+
+3) Display alternate records in a table
+
+select * from employee where where mod(id, 2) = 0; // EVEN rows
+
+
+4) Display duplicates of  a column
+
+Select name, count(*) from employees group by name having count(*) > 1;
+
+
+5) Pattern matching queries
+select * from employees where name like 'm%' ( Display employees whose name starts with 'm')
+select * frok employees where name like '%m' ( Display employees whose name ends with 'm')
+select * from employees where name like '%m%' ( Display employees having 'm' in any position)
+select * from employees where name not like '%m%'  ( Display employees whose name does not contain 'm' anywhere)
+select * from employees where name like '_ _ _ _' ( Display employees whose name conatins exactly 4 letters)
+select * from employees where name like' _ L _ M%' (Display employees whose name conatins 'L' 2nd  letter and 'M' 4thletter)
+select * from employees where hiredate like '%DEC%' ( Dispaly employees who joined in the month of december)
+
+6) Display first and last row of the table
+select * from customer where id = 1 or id = (select count(id) from customer);
+
+(select * from customer order by id limit 1)
+union all
+(select * from customer order by id desc limit 1);
+
+7) How many employees in each department
+Select count(*), department_name from employees group by department_name;
+
+
+8) Return Salary category based on salary range of an employee
+Select name, salary
+CASE
+WHEN salary > 20000 THEN 'High'
+WHEN Salary Between 15000 and 20000 THEN 'Medium'
+ELSE 'Low'
+END as Salary_category
+from employees;
+
+9)Write a query to list department-wise average salaries from the employees table.
+SELECT department, avg(salary) as avg_salary from employees group by department;
+
+10) Select employees who joined in the last 6 months.
+IN ORACLE :- Select * from employees where join_date >= ADD_MONTHS(Sysdate, -6);
+
+11) Write a query to fetch all employees who do not belong to any department.
+Select * from employees emp left join department dept on emp.department_id = dept.department_id where dept.department_id is NULL;
+
+12) Write a query to find the employees who have the same manager
+
+SELECT manager_id, count(*) from employees group by manager_id having count(*) > 1 ; [ THIS GIVES THE MANAGER WHO MANAGES MORE THAN 1 EMPLOYEE]
+
+ACTUAL QUERY :- select * from employees where manager_id in ( Select manager_id from employees group by manager_id  having count(*) > 1);
+
+
+13) Write a query to find the First and Last record for each employee based on the 'hire_date' column
+WITH RankedEmployees AS (
+    SELECT *, 
+           ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY hire_date ASC) AS rn_first,
+           ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY hire_date DESC) AS rn_last
+    FROM employee
+)
+SELECT employee_id, name, hire_date
+FROM RankedEmployees
+WHERE rn_first = 1 OR rn_last = 1
+ORDER BY employee_id, hire_date;
+
+
+14) Customer(customer_id, name) 
+Orders(order_id, customer_id, order_date, amount)
+Write a query to find the top 3 customers by toatl order amount in the last 30 days, returning : customer_id, name, total_amount
+
+Select cus.customer_id, cus.name, sum(ord.amount) as total_amount from customer cus inner join orders ord on cus.cutomer_id = ord.customer_id
+where ord.order_date >= sysdate - 30
+group by cus.customer_id, cus.customer_name
+order by total_amount desc
+limit 3;
+
+
+15)  write a query to fetch the employees who joined after 1st Jan 2024 and having more than 3 years experience ?
+SELECT * FROM employee
+WHERE join_date > '2024-01-01'
+WHERE DATEDIFF(SYSDATE(), join_date) > (365 * 3);
