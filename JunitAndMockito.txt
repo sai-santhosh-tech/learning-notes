@@ -1,0 +1,256 @@
+1. Testing Normal Methods
+
+Service Class
+@Service
+public class UserService {
+
+    private final UserRepository repository;
+
+    public UserService(UserRepository repository) {
+        this.repository = repository;
+    }
+
+    public String getUserName(Long id) {
+        return repository.findById(id);
+    }
+}
+
+Repository
+public interface UserRepository {
+    String findById(Long id);
+}
+
+
+JUnit + Mockito Test
+
+@ExtendWith(MockitoExtension.class)
+class UserServiceTest {
+
+    @Mock
+    private UserRepository repository;
+
+    @InjectMocks
+    private UserService service;
+
+    @Test
+    void testGetUserName() {
+
+        when(repository.findById(1L))
+                .thenReturn("John");
+
+        String result = service.getUserName(1L);
+
+        assertEquals("John", result);
+		assertNotNull(result);
+		
+    }
+}
+
+
+2. Testing Static Methods
+
+Mockito 3.4+ supports static mocking.
+
+Utility Class
+public class DateUtil {
+
+    public static String getCurrentYear() {
+        return "2026";
+    }
+}
+
+Service
+public class ReportService {
+
+    public String generateReport() {
+        return "Report-" + DateUtil.getCurrentYear();
+    }
+}
+
+Test
+class ReportServiceTest {
+
+    @Test
+    void testGenerateReport() {
+
+        try (MockedStatic<DateUtil> mockedStatic =
+                     Mockito.mockStatic(DateUtil.class)) {
+
+            mockedStatic.when(DateUtil::getCurrentYear)
+                    .thenReturn("2025");
+
+            ReportService service = new ReportService();
+
+            String result = service.generateReport();
+
+            assertEquals("Report-2025", result);
+        }
+    }
+}
+MockedStatic implements AutoCloseable, so it is usually used inside a try-with-resources block.
+
+Why?
+Static mocking affects the entire JVM thread context while it is active.
+Without closing it, the static method remains mocked and can unexpectedly affect other tests.
+
+3. Testing Private Methods
+Recommended Approach
+
+Private methods should generally be tested indirectly through public methods.
+
+Class
+public class Calculator {
+
+    public int squareAndAddOne(int num) {
+        return square(num) + 1;
+    }
+
+    private int square(int num) {
+        return num * num;
+    }
+}
+
+Test
+class CalculatorTest {
+
+    @Test
+    void testSquareAndAddOne() {
+
+        Calculator calculator = new Calculator();
+
+        int result = calculator.squareAndAddOne(5);
+
+        assertEquals(26, result);
+    }
+}
+
+Calling Private Method Using Reflection (Not Recommended)
+
+If interviewers ask, you can mention reflection.
+
+Class
+public class Calculator {
+
+    private int square(int num) {
+        return num * num;
+    }
+}
+
+Test
+@Test
+void testPrivateMethod() throws Exception {
+
+    Calculator calculator = new Calculator();
+
+    Method method =
+            Calculator.class.getDeclaredMethod("square", int.class);
+
+    method.setAccessible(true);
+
+    int result = (int) method.invoke(calculator, 5);
+
+    assertEquals(25, result);
+}
+
+
+4. Mocking a Void Method
+
+Suppose the dependency has a void method.
+
+public interface EmailService {
+    void sendEmail(String email);
+}
+
+Use doNothing()
+
+@Test
+void testSendNotification() {
+
+    doNothing().when(emailService)
+               .sendEmail("abc@gmail.com");
+
+    service.notifyUser("abc@gmail.com");
+
+    verify(emailService).sendEmail("abc@gmail.com"); "Check that the sendEmail("abc@gmail.com") method was called exactly one time on the mocked emailService object."
+}
+
+Called 2 times
+verify(emailService, times(2))
+        .sendEmail("abc@gmail.com");
+		
+Never called
+verify(emailService, never())
+        .sendEmail("abc@gmail.com");
+		
+		
+		
+5. Check Exceptions
+
+Service
+public class UserService {
+
+    public String getUser(int id) {
+
+        if (id <= 0) {
+            throw new IllegalArgumentException("Invalid User Id");
+        }
+
+        return "John";
+    }
+}
+
+Test
+@Test
+void testException() {
+
+    UserService service = new UserService();
+
+    assertThrows(
+            IllegalArgumentException.class,
+            () -> service.getUser(0)
+    );
+}
+
+✅ Test passes because IllegalArgumentException is thrown.
+
+
+Check Exception Message
+@Test
+void testExceptionMessage() {
+
+    UserService service = new UserService();
+
+    IllegalArgumentException exception =
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> service.getUser(0)
+            );
+
+    assertEquals(
+            "Invalid User Id",
+            exception.getMessage()
+    );
+}
+
+
+
+For methods returning boolean, you typically use:
+
+assertTrue() → when you expect true
+assertFalse() → when you expect false
+
+
+Quick JUnit Assertion Cheat Sheet
+
+| Return Type         | Assertion                                  |
+| ------------------- | ------------------------------------------ |
+| `boolean`           | `assertTrue()`, `assertFalse()`            |
+| `String`            | `assertEquals(expected, actual)`           |
+| `int`, `long`, etc. | `assertEquals(expected, actual)`           |
+| `List`              | `assertEquals()`, `assertIterableEquals()` |
+| `Object`            | `assertEquals()`, `assertNotNull()`        |
+| `void`              | `verify()` (Mockito)                       |
+| Exception           | `assertThrows()`                           |
+
+
+
