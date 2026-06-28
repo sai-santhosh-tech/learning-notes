@@ -1,0 +1,190 @@
+12 FACTOR APP METHODOLOGY
+
+1) Code base
+
+Single code base for each service, Git helps to achieve this.
+
+Each microservice should have a single codebase tracked in version control, with multiple deployments (dev, test, prod) coming from that same codebase.
+
+
+Example:
+
+Order Service  -> order-service.git
+Payment Service -> payment-service.git
+
+
+2) Dependencies
+
+Explicit dependencies. Like pom.xml for Spring & package.json for React.
+
+The application should not depend on:
+JARs manually copied to servers
+Libraries pre-installed on the OS
+Different versions available on different servers
+
+Everything needed should be declared in the project.
+
+3) Config
+
+Configuration is externalized using environment variables and profiles rather than hardcoded values.
+
+
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+The idea is:
+Configuration should live outside the code.
+You should be able to deploy the same artifact everywhere and only change environment variables.
+
+application-dev.properties
+application-test.properties
+application-prod.properties
+We usually have different properties file for dev,test,stage & prod. Will use env variable to pick the right properties files accordingly.
+
+In practice, many Spring Boot projects use both:
+Profiles (application-dev.properties)
+Environment variables
+
+4) Backing Services
+
+Treat databases, caches, and message brokers as attached resources.
+The application should connect through configuration rather than hardcoding.
+
+❌ Hardcoded
+
+String url = "jdbc:mysql://10.10.10.5:3306/orders";
+
+✅ Externalized
+
+spring.datasource.url=${DB_URL}
+
+The application should not care whether it's connected to MySQL, PostgreSQL, Redis, or another service. It should access them through 
+configuration so they can be swapped without code changes.
+
+
+5) Build, Release, Run
+
+Separate:
+
+Build
+Release
+Run
+
+Example:
+
+Source Code
+    ↓
+Build (JAR)
+    ↓
+Release
+    ↓
+Run
+
+This is common in CI/CD pipelines.
+
+6) Processes (Stateless Services)
+What it means
+A microservice should not store user data in memory between requests.
+
+❌ Bad
+
+static Map<String, User> loggedInUsers = new HashMap<>();
+
+If the service restarts, all data is lost.
+
+Good
+Store state in:
+Database
+Redis
+Cache
+
+7) Port Binding
+
+What it means
+The application should start itself and expose a port.
+
+
+Why?
+The service doesn't depend on an external application server.
+
+8) Concurrency
+What it means
+Scale by running more instances.(Horizontal scaling)
+
+9) Disposability
+What it means
+
+Services should:
+Start quickly
+Stop gracefully
+
+Example
+
+When Kubernetes wants to replace a pod:
+Old Pod
+   ↓
+Finish current requests
+   ↓
+Shutdown
+   ↓
+New Pod Starts
+
+Services should start fast and shut down gracefully without losing requests.
+
+10) Dev/Prod Parity
+What it means
+Development and production environments should be as similar as possible.
+
+❌ Bad
+Dev  -> H2 Database
+Prod -> Oracle Database
+
+Problems appear only after deployment.
+
+✅ Good
+Dev  -> PostgreSQL
+Prod -> PostgreSQL
+
+Why?
+Reduces "works on my machine" issues.
+
+Interview Answer
+Development, testing, and production environments should be similar to minimize deployment surprises.
+
+11) Logs
+What it means
+Applications should write logs to console.
+
+
+12) Admin Processes
+What it means
+One-time administrative tasks should run separately from the application.
+
+Examples:
+Database migration
+Data cleanup
+Batch processing
+Backfilling data
+
+One-off tasks such as database migrations and maintenance jobs should run as separate processes from the main application.
+
+| Factor                     | Easy Meaning                                                      |
+| -------------------------- | ----------------------------------------------------------------- |
+| **1. Codebase**            | One code repository per service                                   |
+| **2. Dependencies**        | Declare all dependencies explicitly (pom.xml, package.json, etc.) |
+| **3. Config**              | Keep configuration outside the code (environment variables)       |
+| **4. Backing Services**    | Access databases, caches, queues via configuration                |
+| **5. Build, Release, Run** | Separate build, deployment, and execution stages                  |
+| **6. Processes**           | Keep services stateless                                           |
+| **7. Port Binding**        | Service runs and exposes its own port                             |
+| **8. Concurrency**         | Scale by adding more instances                                    |
+| **9. Disposability**       | Fast startup and graceful shutdown                                |
+| **10. Dev/Prod Parity**    | Keep environments similar                                         |
+| **11. Logs**               | Write logs to console; collect externally                         |
+| **12. Admin Processes**    | Run migrations and maintenance separately                         |
+
+
+
+"The 12-Factor App methodology promotes externalized configuration, stateless services, scalable processes, environment consistency, 
+centralized logging, and automated deployments, making applications cloud-native and easy to run on containers and Kubernetes."
