@@ -1047,6 +1047,122 @@ NOTE :- Every thread normally caches the varaibales locally for performance reas
 normalCounter++ and volatileCounter++ are both not atomic.
 atomicCounter.incrementAndGet() is atomic and thread-safe.
 
+
+Why do we need Atomic variables?
+
+AtomicInteger, AtomicLong, AtomicReference, etc., ensure atomicity by using CPU-level atomic instructions (such as Compare-And-Swap (CAS)) instead of using locks (synchronized).
+
+Suppose two threads increment a normal integer.
+count++;
+
+This looks like one operation, but internally it is three operations:
+1. Read count from memory
+2. Increment it
+3. Write it back
+
+AtomicInteger count = new AtomicInteger(5);
+count.incrementAndGet();
+
+Internally, it uses Compare-And-Swap (CAS).
+
+CAS works like this
+
+Suppose:
+Current value = 5
+
+Thread-1 wants to increment.
+It performs:
+
+Expected = 5
+New Value = 6
+
+if(current == expected)
+      replace with new value
+else
+      retry
+	  
+
+Example with two threads => 
+
+Initial value
+count = 5
+
+Thread-1 Reads
+Expected = 5
+New = 6
+
+Thread-2 Reads
+Expected = 5
+New = 6
+
+Now Thread-1 executes CAS
+Current = 5
+Expected = 5
+Match ✅
+Update value to 6
+Now the value becomes => count = 6
+
+Now Thread-2 executes CAS
+Current = 6
+Expected = 5
+
+Mismatch ❌
+The update fails.
+
+Thread-2 retries:
+Read current = 6
+Expected = 6
+New = 7
+
+CAS succeeds
+count = 7
+
+
+volatile does not ensure atomicity. It only ensures visibility (and ordering guarantees), not that a sequence of operations executes as one indivisible unit.
+
+Example
+class Counter {
+    volatile int count = 0;
+
+    public void increment() {
+        count++;
+    }
+}
+
+Even though count is volatile, the statement: count++;
+
+is actually:
+1. Read count
+2. Add 1
+3. Write count
+
+If two threads execute increment() simultaneously:
+
+Initial count = 5
+
+Thread-1 reads 5
+Thread-2 reads 5
+
+Thread-1 writes 6
+Thread-2 writes 6
+
+Final count = 6 ❌
+Expected = 7
+
+The volatile keyword cannot prevent this race condition.
+
+What volatile guarantees
+If one thread writes: flag = true;
+
+and another thread reads:
+if (flag) {
+    // ...
+}
+then the second thread is guaranteed to see the updated value without needing synchronization.
+
+volatile boolean flag = false;
+This is a common use case for volatile.
+
 29) == vs equals()
 
 	1. == Operator (Reference Comparison)
