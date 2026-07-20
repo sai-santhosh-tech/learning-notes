@@ -1,0 +1,1404 @@
+1) How to reduce startup time for spring boot application or optimize the spring boot application ?
+
+   a) Initialize beans lazily, only when needed:  spring.main.lazy-initialization=true
+   b) Exclude Unused Auto-Configurations
+   d) Avoid loading unnecessary configs with: spring.profiles.active=prod
+   c) Reduce log output at startup:  logging.level.root=warn
+
+How to increase the performance of SPRING BOOT Application ?
+
+	1) Initialize beans lazily, only when needed:  spring.main.lazy-initialization=true
+	2) Exclude Unused Auto-Configurations
+	3)Enable Caching : Use @Cacheable for frequently requested data
+	4)Asynchronous & Parallel Processing: Use @Async for non-blocking calls, Use CompletableFuture, reactive programming, or multithreading for parallelism.
+	5)Profile-Based Configuration: Use different configs for dev/prod
+	6)Use Metrics & Monitoring: Monitor with tools like Micrometer, Prometheus, Grafana etc
+	7) Improve JVM Performance: Choose appropriate GC (e.g., G1GC, ZGC for low latency)
+	8)Use Efficient Data Access: 
+		 a) Tune JPA/Hibernate
+			Avoid N+1 queries (use fetch join or @EntityGraph)
+			Use pagination for large datasets
+			Enable SQL logging during development only
+		 b) Use Connection Pooling (HikariCP is default)
+		 
+2) How to prevent Memory leak issue in java
+
+MEMORY LEAK :- Objects Which are no longer required, but present in memory(heap,meta space) and Garabage collector is unable to remove them.
+
+Common Causes of Memory Leaks
+
+1. Unclosed Resources
+Resources such as database connections, file streams, and sockets consume memory and system resources.
+
+2. Static fields live as long as the class lives — leading to memory leaks if you store objects unnecessarily.
+public static List<User> userList = new ArrayList<>(); // Bad
+
+3. Collections grow but don’t shrink automatically. Clear large maps/lists when done
+	list.clear(); 
+	map = null;
+4. Improper Cache Implementation
+Caches that grow without limit can exhaust memory.
+5. Careful with Inner Classes / Anonymous Classes : They hold implicit references to outer classes
+6. Monitor the Memory using Memory Leak Detection Tools like VisualVM, JProfiler etc
+	
+3) How to handle failures in MICROSREVICES
+
+@Hystrix annottaion
+   Use libraries like Resilience4j to protect from downstream failures: Circuit Breaker, Retry, Fallback
+	
+	@Service
+	public class OrderService {
+
+		private final RestTemplate restTemplate;
+
+		public OrderService(RestTemplate restTemplate) {
+			this.restTemplate = restTemplate;
+		}
+
+		@CircuitBreaker(name = "productService", fallbackMethod = "getDefaultProduct")
+		@Retry(name = "productService")
+		public String getProductDetails(String productId) {
+			String url = "http://localhost:8081/products/" + productId;
+			return restTemplate.getForObject(url, String.class);
+		}
+
+		// Fallback method: same signature + Throwable as last parameter
+		public String getDefaultProduct(String productId, Throwable t) {
+			return "Fallback Product: No data available for productId=" + productId;
+		}
+	}
+
+
+	@GetMapping("/{id}")
+	public String fetchProduct(@PathVariable String id) {
+			return orderService.getProductDetails(id);
+	}
+	RETRY Config : 
+	resilience4j.retry.instances.productService.max-attempts=3
+	resilience4j.retry.instances.productService.wait-duration=2s
+
+	How It Works
+		On calling /orders/123, OrderService contacts ProductService.
+		If ProductService fails:
+			1) Retry 3 times (2 seconds apart).
+			2) If still fails → circuit breaker opens.
+			3) Fallback method is called.
+		
+
+4) What is REST API Versioning?
+REST API versioning is a technique used to manage changes and ensure backward compatibility in your APIs as they evolve over time.
+Apart from URI, Versioning can also be done through Query parameter, header and Content Negoitation.
+	Why Use Versioning?
+	When your API changes (e.g., schema, behavior, or structure), existing clients may break.
+
+	Versioning allows you to:
+		1) Add new features
+		2) Fix bugs or change behavior
+		3) Maintain compatibility for existing users
+		
+5) What are BEST practices we should follow while developing REST APIs
+    1. Use Meaningful Resource Names
+		✅ Good:
+		/users
+		/orders
+		/products
+		❌ Bad:
+		/getUsers
+		/createUser
+	2. Use Proper HTTP Methods
+	3. Return Correct HTTP Status Codes
+	4. Input Validation
+		Validate all incoming requests.
+			Examples:
+				Mandatory field validation
+				Length validation
+				Format validation (email, phone, etc.)
+				Business rule validation
+		public ResponseEntity<User> createUser(
+                  @Valid @RequestBody UserRequest request) {
+		}
+	5. Proper Error handling
+	6. Security
+	7. API Versioning
+	    Version APIs to avoid breaking existing clients.
+	8. Documentation
+	    Document APIs clearly so consumers can use them easily.
+	9. Pagination for Large Data Sets
+	    Prevents loading huge amounts of data.
+	10. Idempotency
+        Repeated calls should produce the same result when applicable.
+		GET → Idempotent
+		PUT → Idempotent
+		DELETE → Idempotent
+		POST → Usually not idempotent
+			
+6) How will you detect a slower microservice which is causing a performance issue ?
+   Lets suppose we have multiple services like A,B,C & D and calling sequencly like A  - > B ->  C -> D and back to A.
+   C is responsing slow, So A is performing slower bcz of C.
+   Here we can make use of ZIPKIN, where we can get the timings of each microservice/endpoints and analyze the rootcause and get rid out of it.
+   
+7) How will you track exception in an MICROSREVICE ENVIRONMENT (Means which microservice thrown exception)
+   Just get the traceId, and use tools like Kibana, Zipkin to get the whole information about that request and find the exception and go to that service and resolve it.
+
+
+8) Differenec between Entity Type and Value Type
+   Entity Type = "Independent object with identity" → @Entity (Must have an @Id,  Stored in a separate table)
+   Value Type = "Part of another object, no ID" → @Embeddable, used with @Embedded (Does not have an @Id, Stored in the same table as the owning entity)
+
+9) How to schedule a task in spring boot ?
+	Steps to Schedule a Task
+	1) Enable Scheduling using @EnableScheduling 
+	2)Create a Scheduled Method: Use @Scheduled on any @Component, @Service, or @Configuration bean
+		@Component
+		public class MyScheduledTask {
+
+			@Scheduled(fixedRate = 5000) // runs every 5 seconds
+			public void runEveryFiveSeconds() {
+				System.out.println("Task executed at: " + java.time.LocalDateTime.now());
+			}
+		}
+	| Annotation                                           | Description                                        |
+| ---------------------------------------------------- | -------------------------------------------------- |
+| `@Scheduled(fixedRate = 5000)`                       | Executes every 5 sec **after the last start time** |
+| `@Scheduled(fixedDelay = 5000)`                      | Executes 5 sec **after the last completion**       |
+| `@Scheduled(initialDelay = 10000, fixedRate = 5000)` | Starts after 10 sec, then every 5 sec              |
+| `@Scheduled(cron = "0 0/1 * * * ?")`                 | Cron expression (every 1 min in this case)         |
+	
+	@Scheduled(fixedRate = X)
+		Next execution starts X ms after the previous execution STARTED
+		Runs at a regular interval, regardless of how long the task takes (can overlap if not finished)
+
+	@Scheduled(fixedDelay = X)
+		Next execution starts X ms after the previous execution COMPLETED
+		Ensures a fixed pause between completions
+
+For a job that should run every day at 1:00 AM, the cron expression depends on the format your system uses.
+
+✅ Standard Spring Boot / Quartz (6 fields)
+0 0 1 * * *
+
+Meaning:
+0 → seconds
+0 → minutes
+1 → hour (1 AM)
+* → every day of month
+* → every month
+* → every day of week
+
+✔ Runs daily at 1:00 AM
+
+10) What is marker interface & its use case with an example
+	A marker interface is an interface that has no methods or fields. It is used to mark or tag a class to indicate that it should be handled in a 
+	special way by the JVM or a framework.
+	Ex :- Serializable, cloneable etc
+	Real-World Use Case: Auditing System
+	Imagine you have a system where only certain entities should be audited (e.g., stored in an audit log).
+	Step 1: Define the Marker Interface
+	public interface Auditable {
+    // Marker interface — no methods
+	}
+	Step 2: Mark Specific Classes
+	public class User implements Auditable {
+		private String username;
+		private String email;
+	}
+
+	public class Product {
+		private String name;
+		private double price;
+	}
+	Only User is auditable.
+	Step 3: Auditing Logic Using Marker Interface
+	public class AuditLogger {
+
+    public void logChange(Object obj) {
+        if (obj instanceof Auditable) {
+            System.out.println("Auditing: " + obj.getClass().getSimpleName());
+            // Save audit info to DB or log
+        } else {
+            System.out.println("Skipping audit for: " + obj.getClass().getSimpleName());
+        }
+    }
+}
+
+11) Real-world use cases for overriding equals() and hashcode() methods in a class ?
+	1. Using Objects in HashSet, HashMap, Hashtable
+	These use hashCode() to find the bucket and equals() to check for equality.
+	If you don’t override equals() and hashCode(), both objects are considered different even if their data is the same.
+	2. Entity Comparisons in ORM (e.g., Hibernate)
+	In JPA/Hibernate, entities are often compared by ID. Without overriding, entity identity and caching can break.
+	We should override equals() method to compare entity ids.
+
+12) What Are Varargs in Java ?
+	Varargs (Variable-Length Arguments) allow you to pass zero or more arguments to a method. Instead of defining multiple overloaded methods, 
+	you can use varargs to accept any number of parameters of the same type.
+	Use Cases :- 
+	| Use Case                                               | Example                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| When number of arguments can vary                      | Logging, calculations, string utilities                                  |
+| To simplify APIs that used overloaded methods          | E.g., `printf(String format, Object... args)`                            |
+| To avoid manually creating arrays when calling methods | `someMethod("a", "b", "c")` vs `someMethod(new String[]{"a", "b", "c"})` |
+
+	JDK Example: String.format() :- format(String format, Object... args) uses varargs to accept dynamic arguments.
+	String formatted = String.format("Name: %s, Age: %d", "Sai", 25);
+Rules & Limitations :-
+	1. Only one vararg allowed per method
+	void method(String... names, int... ages); // ❌ Compile error
+	2. Must be the last parameter
+	void method(String prefix, String... names); // ✅
+	void method(String... names, String suffix); // ❌ Compile error
+
+13) What is an Idempotent Method in REST?
+	In REST, an idempotent method is a method that can be called multiple times without changing the result beyond the first call.
+	Example: 
+	1) PUT is Idempotent (GET,DELETE also Idempotent)
+	PUT /user/123
+	Body: { "name": "Sai", "age": 30 }
+	a) First call: updates or creates user 123 with new data.
+	b) Second call: same input, same effect — no additional change.
+	2) POST is NOT Idempotent
+	POST /user
+	Body: { "name": "Sai", "age": 30 }
+	a) First call: creates user with a new ID.
+	b) Second call: creates another user with the same data — not idempotent.
+	✅ Why Idempotency Matters
+	1) Safety: Helps avoid side effects from retries (e.g., network timeouts).
+	2) Resilience: Used in distributed systems and APIs with retry logic.
+
+
+	PUT vs PATCH
+	🔥 1. What’s the core difference?
+	👉 PUT = full update (replace the resource)
+	👉 PATCH = partial update (modify only some fields)
+
+	PUT   /users/101   → replace entire user  
+	PATCH /users/101   → update only given fields 
+
+	🔥 2. Is PUT always required to send all fields?
+	👉 Ideally yes (by definition)
+	PUT is meant to replace the entire resource.
+
+	❗ If you send partial data with PUT:
+	Missing fields may become null or reset
+	Behavior becomes ambiguous
+
+	🔥 3. Can PATCH update multiple fields?
+	👉 Yes ✅
+	PATCH can update one or many fields
+
+	🔥 4. Which one is idempotent?
+	👉 PUT → always idempotent
+	👉 PATCH → not guaranteed
+
+	🎯 Perfect Interview Summary =>
+	👉 PUT is used for full resource replacement and is idempotent, whereas PATCH is used for partial updates and may or may not be idempotent depending on implementation.
+
+14) Why avoid public static final for SINGLETON ?
+
+	public class MySingleton {
+		public static final MySingleton INSTANCE = new MySingleton();
+		private MySingleton() {}
+	}
+	This is a Singleton pattern using a public static final field. It’s simple, thread-safe, and eagerly initialized.
+	Why to avoid ?
+	1) We can't lazily initialize Singleton So Wastes memory if unused.
+
+15) What is Spring Cloud?
+Spring Cloud is a set of tools built on top of the Spring Framework that helps in building resilient, scalable, and distributed microservices.
+
+It provides solutions to many common problems in microservices architecture such as:
+	1) Service discovery (Eurakeserver)
+	2) Configuration management (Spring cloud config server)
+	3) Load balancing (Spring Cloud LoadBalancer)
+	4) Circuit breakers (Resilience4j, Hystrix)
+	5) API Gateway & Routing (Spring Cloud Gateway)
+	6) Tracing & Logging (Sleuth, Zipkin, ELK)
+	
+16) How to secure communication between two services ?
+	🔐 1. Use HTTPS (TLS/SSL) : Encrypt all communication between services.
+	🛂 2. OAuth2 / JWT-Based Authentication : Use Spring Security + OAuth2 or JWT tokens to:
+          Authenticate calling microservices
+          Validate tokens in each service
+			🔐 Flow:
+			a) Service A gets JWT from Auth Server
+			b) Sends JWT in Authorization: Bearer <token> header to Service B
+			c) Service B validates the token
+	📛 3. API Gateway Authentication (Single Entry Point)
+			Use Spring Cloud Gateway to Authenticate at the gateway
+	
+	🔑 4. Mutual TLS (mTLS)
+			Both services verify each other using certificates.
+			Strong security for internal service calls
+
+Forward only valid requests to downstream services	
+	| Strategy             | Description                             |
+| -------------------- | --------------------------------------- |
+| 🔒 HTTPS             | Encrypt all traffic between services    |
+| 🔐 OAuth2 / JWT      | Authenticate requests between services  |
+| 🤝 Mutual TLS        | Verify both client and server identity  |
+| 🧰 API Gateway       | Centralized authentication and routing  |
+| 🧾 Spring Security   | Enforce access control via roles/scopes |
+| 🔁 Token Propagation | Ensure auth info is forwarded           |
+
+17) Define sealed class or interface (Java 17 feature) ?
+	Sealed classes/interfaces are like saying: "Only these few classes are allowed to extend/implement me — no one else!"
+	
+	NOTE :- All subclasses are final classes only, if don't need to be final then make it non-sealed
+	Example :
+	1️) Payment.java – Sealed Interface
+	public sealed interface Payment permits CreditCardPayment, UpiPayment, WalletPayment {
+		void pay(double amount);
+	}
+	
+	2) CreditCardPayment.java – Final class
+	public final class CreditCardPayment implements Payment {
+     @Override
+     public void pay(double amount) {
+        System.out.println("Paid ₹" + amount + " using Credit Card.");
+     }
+   }
+   3) UpiPayment.java – Final class
+   public final class UpiPayment implements Payment {
+	 @Override
+	 public void pay(double amount) {
+        System.out.println("Paid ₹" + amount + " using UPI.");
+     }
+   }
+   
+   4) PaymentProcessor.java – Runner
+	public class PaymentProcessor {
+
+    public static void main(String[] args) {
+        processPayment(new CreditCardPayment(), 1000);
+        processPayment(new UpiPayment(), 500);
+        processPayment(new WalletPayment(), 300);
+    }
+
+    static void processPayment(Payment payment, double amount) {
+        payment.pay(amount);
+
+        // Example of instanceof + pattern matching (Java 16+)
+        if (payment instanceof UpiPayment upi) {
+            System.out.println("Logged: Paid via UPI");
+        }
+    }
+	
+	| Keyword      | Meaning                                                    |
+| ------------ | ---------------------------------------------------------- |
+| `sealed`     | Base class/interface, restricts subclasses                 |
+| `permits`    | Lists the allowed subclasses                               |
+| `final`      | Subclass can’t be extended                                 |
+| `non-sealed` | Subclass lifts the restriction (can be extended by anyone) |
+
+FlexiblePayment.java — non-sealed
+public non-sealed class FlexiblePayment implements Payment {
+    @Override
+    public void pay(double amount) {
+        System.out.println("Paid ₹" + amount + " using a flexible method.");
+    }
+}
+
+This class can be override now, as it is non-sealed class.
+
+Benefits of SEALED CLASS :-
+1)  Explicit control over subclassing
+2)  Good for pattern matching (switch expressions or instanceof block): As compiler knows all subclasses)
+
+
+18) DELETE vs TRUNCATE
+| Feature                   | `DELETE`         | `TRUNCATE`          |
+| ------------------------- | ---------------- | ------------------- |
+| Removes All Rows?         | ✅ (if no WHERE)  | ✅ Always            |
+| Conditional Deletion?     | ✅ (uses `WHERE`) | ❌ No                |
+| Rollback Possible?        | ✅ Yes            | ⚠️ Depends on DB    |
+| Fires Triggers?           | ✅ Yes            | ❌ No                |
+| Speed                     | Slower           | Faster              |
+| Resets Auto-Increment?    | ❌ No             | ✅ Yes (in most DBs) |
+| Logged in Transaction Log | ✅ Fully          | ❌ Minimally         |
+
+DELETE :
+The space (pages/blocks) in the table is not immediately released to the database.
+Instead, that space is marked as available for reuse within the same table.
+
+TRUNCATE :
+TRUNCATE deallocates memory (or storage space) immediately, and is ideal for quickly clearing a table completely.
+
+18) Creating custom actuator
+
+ a)	@Component
+	@Endpoint(id = "customstatus")
+	public class CustomStatusEndpoint {
+
+		@ReadOperation
+		public String customHealth() {
+			return "Application is running fine!";
+		}
+	}
+	@Endpoint(id = "customstatus") → This will be available at /actuator/customstatus.
+	@ReadOperation → Exposes a GET endpoint.
+ b) Enable Custom endpoints : management.endpoints.web.exposure.include=health,info,customstatus
+ c) Call Custom Endpoint : GET http://localhost:8080/actuator/customstatus
+
+
+| Annotation         | HTTP Method | Purpose               |
+| ------------------ | ----------- | --------------------- |
+| `@ReadOperation`   | `GET`       | Read or fetch data    |
+| `@WriteOperation`  | `POST`      | Modify or update data |
+| `@DeleteOperation` | `DELETE`    | Delete or reset data  |
+
+19) How to configure multiple Dbs in Spring Boot Application ?
+
+# Primary DB config
+spring.datasource.primary.url=jdbc:mysql://localhost:3306/primary_db
+spring.datasource.primary.username=root
+spring.datasource.primary.password=root
+spring.datasource.primary.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.primary.hikari.maximum-pool-size=5
+
+# Secondary DB config
+spring.datasource.secondary.url=jdbc:mysql://localhost:3306/secondary_db
+spring.datasource.secondary.username=root
+spring.datasource.secondary.password=root
+spring.datasource.secondary.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.secondary.hikari.maximum-pool-size=5
+
+NOTE : When using multiple databases in a Spring Boot application, **auto-configuration is only applied to the default (primary) DataSource. 
+For additional databases, you must manually configure.
+
+@Configuration
+@EnableJpaRepositories(
+    basePackages = "com.example.secondary.repository",
+    entityManagerFactoryRef = "secondaryEntityManagerFactory",
+    transactionManagerRef = "secondaryTransactionManager"
+)
+public class SecondaryDBConfig {
+
+    @Bean
+    @ConfigurationProperties("spring.datasource.secondary")
+    public DataSource secondaryDataSource() {
+        return DataSourceBuilder.create().build(); // Manually created
+    }
+
+    @Bean
+    public LocalContainerEntityManagerFactoryBean secondaryEntityManagerFactory(
+            EntityManagerFactoryBuilder builder) {
+        return builder
+                .dataSource(secondaryDataSource())
+                .packages("com.example.secondary.entity")
+                .persistenceUnit("secondary")
+                .build();
+    }
+
+    @Bean
+    public PlatformTransactionManager secondaryTransactionManager(
+            @Qualifier("secondaryEntityManagerFactory") EntityManagerFactory emf) {
+        return new JpaTransactionManager(emf);
+    }
+}
+
+
+EXCLUDE TOMCAT SERVER AND ADD SOME OTHER SERVER IN SPRING BOOT
+
+Spring Boot uses Apache Tomcat by default, but you can easily switch to other embedded servers like: Jetty & Undertow
+
+🧠 Core Idea
+👉 You need to:
+Exclude Tomcat
+Add another server dependency
+
+✅ 1. Exclude Tomcat
+Maven
+<dependency id="4w5p1e">
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+
+✅ 2. Add New Server
+👉 Option 1: Use Jetty
+<dependency id="z3p6kd">
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-jetty</artifactId>
+</dependency>
+
+⚡ That’s it!
+
+Spring Boot will automatically:
+Detect available server
+Start application using that server
+
+🧪 Verify
+
+When you start the app, logs will show:
+Tomcat → Tomcat started on port...
+Jetty → Jetty started on port...
+Undertow → Undertow started on port...
+
+🧾 Interview One-Liner
+👉 To use a different server in Spring Boot, exclude the default Tomcat dependency and add the desired server like Jetty or Undertow. Spring Boot auto-configures it.
+
+20) Difference between Class.forName(String className) and ClassLoader.loadClass(String className)
+
+Class.forName(String className)  : Loads the class and also initializes it (i.e., runs static blocks).
+ClassLoader.loadClass(String className) : Loads the class but does NOT initialize it (i.e., static blocks are NOT executed).
+
+Use Class.forName("ClassName") when you want to both load and initialize the class immediately.
+Use ClassLoader.loadClass("ClassName") when you want just loading, and handle initialization separately or later.
+
+If the class is not found, the method throws a ClassNotFoundException.
+
+
+ClassNotFoundException vs NoClassDefFoundError
+| ClassNotFoundException                                                                       | NoClassDefFoundError                                           |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Checked Exception                                                                            | Error                                                          |
+| Occurs while loading a class explicitly using `Class.forName()` or `ClassLoader.loadClass()` | Class was available at compile time but missing at runtime     |
+| Must be handled or declared                                                                  | Not required to handle                                         |
+| Example: `loadClass("ABC")` when ABC doesn't exist                                           | Application starts, but a dependent class/JAR is removed later |
+
+
+21) How to acieve parallel programming in Spring ?
+
+  1) Enable async support: Using @EnableAsync
+  2)Annotate methods with @Async:
+	@Async
+	public CompletableFuture<String> processData() {
+		// long-running task
+		return CompletableFuture.completedFuture("done");
+	}
+	
+	Use case:
+		a) Send emails
+		b) Run independent tasks in parallel (PDF generation, file uploads, etc.)
+		
+Using CompletableFuture for Complex Parallel Workflows
+You can run multiple async tasks in parallel and wait for their result:
+
+		CompletableFuture<String> task1 = service.task1();
+		CompletableFuture<String> task2 = service.task2();
+		CompletableFuture.allOf(task1, task2).join(); // wait for both
+
+
+21) what is FUTURE in Java ?
+Future is an interface introduced in Java 5 (with java.util.concurrent package). It represents the result of an asynchronous computation — something that will finish later.
+
+Think of it like a promise:
+“You will get the result later when the task finishes.”
+
+		✅ Basic Use Case
+		You submit a task to a thread or executor, and get a Future<T> in return.
+		You can then:
+			a) Check if it’s done
+			b) Wait for the result(.get())
+			c) Cancel it if needed
+	
+	Key Methods in Future :
+	
+	| Method                          | Description                                                     |
+| ------------------------------- | --------------------------------------------------------------- |
+| `get()`                         | Waits (blocks) until result is available.                       |
+| `get(timeout, unit)`            | Waits for result up to timeout, else throws `TimeoutException`. |
+| `isDone()`                      | Returns `true` if task is completed.                            |
+| `isCancelled()`                 | Returns `true` if task was cancelled.                           |
+| `cancel(mayInterruptIfRunning)` | Tries to stop the task.                                         |
+
+
+❌ Limitations of Future
+1. get() is blocking.
+2. Cannot chain multiple asynchronous operations.
+3. No built-in exception handling.
+4. Difficult to combine multiple futures.
+That’s why Java 8 introduced CompletableFuture, which overcomes all of these.
+
+
+		import java.util.concurrent.*;
+
+		public class FutureExample {
+			public static void main(String[] args) throws Exception {
+				ExecutorService executor = Executors.newSingleThreadExecutor();
+
+				Future<String> future = executor.submit(() -> {
+					Thread.sleep(2000); // Simulate long task
+					return "Task Completed";
+				});
+
+				System.out.println("Doing other work...");
+
+				// Get result (waits if not done)
+				String result = future.get(); // Blocks until done
+				System.out.println("Result: " + result);
+
+				executor.shutdown();
+			}
+		}
+		
+		✅ When to Use Future
+			Use it when:
+				a) You're using Java 5–7
+				b) You just need to run tasks in background and wait for result
+				c) You don’t need chaining, timeout handling, or reactive flows
+
+22) what is COMPLETABLEFUTURE in java?
+	CompletableFuture was introduced in Java 8 as part of the java.util.concurrent package. It is used for asynchronous, non-blocking programming, allowing tasks to 
+	run in separate threads and enabling chaining of operations.
+	
+	It usaually increases the asynchronous programming capabilities.
+
+	Using CompletableFuture
+			CompletableFuture<String> future =
+					CompletableFuture.supplyAsync(() -> {
+						return "Hello";
+					});
+
+			System.out.println(future.get());
+			Here, the task executes asynchronously using the common ForkJoinPool.
+	1. Chaining Operations  => thenApply()
+			Used to transform the result.
+
+			CompletableFuture<String> future =
+				CompletableFuture.supplyAsync(() -> "Java")
+								 .thenApply(str -> str + " Developer");
+
+			System.out.println(future.get());
+
+		Output:
+		Java Developer
+	2. Consuming Results  => thenAccept()
+		CompletableFuture.supplyAsync(() -> "Spring Boot")
+						 .thenAccept(System.out::println);
+
+		Output:
+		Spring Boot
+	3. Combining Multiple Futures   => thenCombine()
+			CompletableFuture<String> first =  CompletableFuture.supplyAsync(() -> "Hello");
+			CompletableFuture<String> second = CompletableFuture.supplyAsync(() -> " World");
+			CompletableFuture<String> result = first.thenCombine(second, (a, b) -> a + b);
+	4. Exception Handling   => exceptionally()
+
+
+	✅ Scenario:
+	You have two simulated APIs:
+    getUserDetails() – takes 2 seconds
+    getOrderDetails() – takes 3 seconds	
+    You want to run both in parallel, and then combine their results.
+	With custom executor: We can provide your own thread pool,
+		public class CompletableFutureExample {
+
+			public static void main(String[] args) throws InterruptedException, ExecutionException {
+				ExecutorService executor = Executors.newFixedThreadPool(2); // Custom thread pool
+
+				CompletableFuture<String> userFuture = CompletableFuture.supplyAsync(() -> getUserDetails(), executor)
+					.orTimeout(3, TimeUnit.SECONDS)
+					.exceptionally(ex -> "User API failed: " + ex.getMessage());
+
+				CompletableFuture<String> orderFuture = CompletableFuture.supplyAsync(() -> getOrderDetails(), executor)
+					.orTimeout(4, TimeUnit.SECONDS)
+					.exceptionally(ex -> "Order API failed: " + ex.getMessage());
+
+				// Combine both results
+				CompletableFuture<String> combined = userFuture.thenCombine(orderFuture, 
+					(user, order) -> "Combined Result: \n" + user + "\n" + order);
+
+				// Print the result when all are done
+				combined.thenAccept(System.out::println).join();
+
+				executor.shutdown();
+			}
+
+			// Simulated API call
+			public static String getUserDetails() {
+				sleep(2000); // 2 seconds
+				return "User: Sai Santhosh";
+			}
+
+			public static String getOrderDetails() {
+				sleep(3000); // 3 seconds
+				return "Order: MacBook Pro";
+			}
+
+			private static void sleep(int millis) {
+				try {
+					Thread.sleep(millis);
+				} catch (InterruptedException e) {
+					throw new IllegalStateException(e);
+				}
+			}
+		}
+	
+	What is ForkJoinPool in Java?
+     ForkJoinPool is a specialized thread pool introduced in Java 7 (java.util.concurrent) for executing tasks using the Fork/Join framework.
+	 It is designed for:
+			a) Parallel processing
+			b) Divide-and-conquer algorithms
+			c) Efficient utilization of CPU cores
+
+	Why is it called Fork/Join?
+    Fork  : Break a large task into smaller subtasks.
+	Join  : Combine the results of the subtasks.
+	
+	Key Feature: Work Stealing
+    Unlike a normal thread pool, ForkJoinPool uses a work-stealing algorithm.
+	Suppose:
+	Thread-1 Queue: [TaskA, TaskB]
+    Thread-2 Queue: []
+    If Thread-2 becomes idle, it can "steal" work from Thread-1's queue.
+	Benefits:
+		Better CPU utilization
+		Reduced thread idle time
+		Improved performance for parallel tasks
+
+NOTE => ForkJoinPool is the default executor used by CompletableFuture.supplyAsync() when no custom executor is provided.
+
+Why use a Thread Pool instead of new Thread()?
+
+Creating a thread for every task is expensive because thread creation and destruction consume CPU and memory. 
+
+A thread pool:
+
+ a) Reuses existing threads.
+b) Limits the maximum number of concurrent threads.
+c) Improves performance and scalability.
+d) Simplifies thread lifecycle management.
+
+1. Fixed Thread Pool => ExecutorService executor = Executors.newFixedThreadPool(3);
+2. Cached Thread Pool => ExecutorService executor = Executors.newCachedThreadPool();
+3. Single Thread Executor => ExecutorService executor = Executors.newSingleThreadExecutor();
+4. Custom Thread Pool =>  You can configure the pool size and queue using ThreadPoolExecutor.
+
+ExecutorService executor = new ThreadPoolExecutor(
+        2,                      // Core pool size
+        5,                      // Maximum pool size
+        60, TimeUnit.SECONDS,   // Keep alive time
+        new LinkedBlockingQueue<>(10)
+);
+
+What each parameter means
+			Core Pool Size = 2
+Initially, 2 threads are created.
+			Maximum Pool Size = 5
+At most 5 threads can exist.
+			LinkedBlockingQueue<>(10)
+If all core threads are busy, up to 10 tasks can wait in this queue.
+
+
+23) GARBAGE COLLECTOR java8 improvements ?
+
+	1) Introduction of G1 Garbage Collector (as default in Java 9)
+	 a) Available in Java 8 (but not default)
+	 b) G1 (Garbage-First) GC is designed for large heap applications (multi-GB) with low pause time goals.
+	 c) Divides the heap into regions for better control and predictability.
+	 
+	 2. Metaspace Replaces PermGen
+	📌 In Java 8, PermGen was removed, and replaced with Metaspace.(REMOVED from heap memory and allocated separate memory)
+		No more OutOfMemoryError: PermGen space
+PAUSE TIME : application is paused for shorter durations during garbage collection (GC) events.
+
+24) How to create custom scope in Spring ?
+	 1) Implement Custom scope by implementing SCOPE Interface
+	 import org.springframework.beans.factory.ObjectFactory;
+		import org.springframework.beans.factory.config.Scope;
+
+		public class MyCustomScope implements Scope {
+
+			private final Map<String, Object> scopedObjects = new HashMap<>();
+
+			@Override
+			public Object get(String name, ObjectFactory<?> objectFactory) {
+				return scopedObjects.computeIfAbsent(name, k -> objectFactory.getObject());
+			}
+
+			@Override
+			public Object remove(String name) {
+				return scopedObjects.remove(name);
+			}
+
+			@Override
+			public void registerDestructionCallback(String name, Runnable callback) {
+				// Optional: useful for web scopes like request/session
+			}
+
+			@Override
+			public Object resolveContextualObject(String key) {
+				return null; // Optional
+			}
+
+			@Override
+			public String getConversationId() {
+				return "myCustomScope";
+			}
+		}
+	2) Register the Custom Scope
+
+			@Configuration
+			public class ScopeConfig {
+
+				@Bean
+				public static CustomScopeConfigurer customScopeConfigurer() {
+					CustomScopeConfigurer configurer = new CustomScopeConfigurer();
+					Map<String, Object> scopes = new HashMap<>();
+					scopes.put("myScope", new MyCustomScope());
+					configurer.setScopes(scopes);
+					return configurer;
+				}
+			}
+	3) Use the Custom Scope
+
+			@Component
+			@Scope("myScope")
+			public class CustomScopedBean {
+				public CustomScopedBean() {
+					System.out.println("CustomScopedBean created: " + this);
+				}
+			}
+
+25) Define an ArrayList and Linkedlist and get 3rd element from both , Which one is better with respect to performance and why ?
+
+ArrayList<Integer> arrayList = new ArrayList<>(List.of(10, 20, 30, 40, 50));
+Integer thirdElementFromArrayList = arrayList.get(2); // 3rd element (index starts at 0)
+System.out.println("ArrayList 3rd element: " + thirdElementFromArrayList);
+
+
+LinkedList<Integer> linkedList = new LinkedList<>(List.of(10, 20, 30, 40, 50));
+Integer thirdElementFromLinkedList = linkedList.get(2); // 3rd element
+System.out.println("LinkedList 3rd element: " + thirdElementFromLinkedList);
+
+	✅ 2. Which one is better in terms of performance?
+		➕ ArrayList: Access by index: O(1) — Very Fast
+           Backed by a contiguous array internally.
+           So, arrayList.get(2) is a direct memory access.
+
+		➖ LinkedList: Access by index: O(n) — Slower
+           Internally a doubly linked list.
+           So, linkedList.get(2) means: Start at head and traverse node-by-node to the 3rd element. This traversal cost grows with list size.
+		   
+26) What value will be returned ?
+
+	public static String call() {
+		try {
+			// System.out.println(1/0);
+			return "one";
+		}catch(Exception e) {
+			return "two";
+		}
+		finally {
+			return "three";
+		}
+	}
+	
+	a) When exception occurred from try block, what value will be returned ?   o/p : three
+	b) When exception not occurred from try block, what value will be returned ?   o/p : three
+	
+27) Methods available in RestTemplate class ?
+
+	✅ Commonly Used RestTemplate Methods
+
+	| HTTP Verb | Method Name         | Description                                                             |
+| --------- | ------------------- | ----------------------------------------------------------------------- |
+| `GET`     | `getForObject()`    | Returns the response body as an object                                  |
+|           | `getForEntity()`    | Returns full `ResponseEntity` (includes headers, status code, and body) |
+| `POST`    | `postForObject()`   | Sends data and returns response body                                    |
+|           | `postForEntity()`   | Sends data and returns `ResponseEntity`                                 |
+|           | `postForLocation()` | Sends data and returns the URI of the new resource                      |
+| `PUT`     | `put()`             | Sends data to update a resource (no return)                             |
+| `DELETE`  | `delete()`          | Deletes the resource at a given URL                                     |
+| ANY       | `exchange()`        | Full control over request method, headers, response                     |
+| ANY       | `execute()`         | Lower-level version of `exchange()` for more customization              |
+| UTILS     | `headForHeaders()`  | Retrieves only HTTP headers                                             |
+| UTILS     | `optionsForAllow()` | Gets allowed HTTP methods at a URL                                      |
+
+
+		RestTemplate restTemplate = new RestTemplate();
+        String url = "https://jsonplaceholder.typicode.com/posts/1";
+        Post response = restTemplate.getForObject(url, Post.class);
+        System.out.println("Using getForObject():");
+		System.out.println("Body: " + response.getTitle());
+		
+		ResponseEntity<Post> response = restTemplate.getForEntity(url, Post.class);
+        System.out.println("Using getForEntity():");
+        System.out.println("Status Code: " + response.getStatusCode());
+        System.out.println("Headers: " + response.getHeaders());
+        System.out.println("Body: " + response.getBody().getTitle());
+		
+What does exchange() do?
+The exchange() method allows you to:
+ a) Use any HTTP method: GET, POST, PUT, DELETE, etc.
+ b) Customize headers
+ c) Send a request body
+ d) Receive a full ResponseEntity, which includes: Body, Headers, Status code
+ 
+		RestTemplate restTemplate = new RestTemplate();
+		String url = "https://jsonplaceholder.typicode.com/posts/1";
+
+		// Setting custom headers
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Accept", "application/json");
+
+		HttpEntity<String> entity = new HttpEntity<>(headers);
+
+		ResponseEntity<Post> response = restTemplate.exchange(
+			url,
+			HttpMethod.GET,
+			entity,
+			Post.class
+		);
+
+		// Access details
+		System.out.println("Status Code: " + response.getStatusCode());
+		System.out.println("Title: " + response.getBody().getTitle());
+		
+		
+28) VOLATILE vs ATOMIC
+
+NOTE :- Every thread normally caches the varaibales locally for performance reasons.
+
+		✅ volatile (USECASE : flags(state changes purpose))
+		Ensures visibility, NOT atomicity
+
+		🔸 What it does:
+		a) Guarantees that reads and writes go directly to and from main memory, not from thread-local caches.
+		b) Ensures visibility of changes to variables across threads.
+		c) It does not provide atomicity for compound operations like count++.
+		
+	✅ Atomic classes (like AtomicInteger, AtomicDouble etc)
+		Part of java.util.concurrent.atomic package
+		Ensures atomicity AND visibility
+
+		🔸 What it does:
+		a) Provides atomic (indivisible) operations on single variables.
+		b) Uses low-level CPU instructions (CAS - Compare and Swap) under the hood.
+		c) Ensures both visibility and atomicity for operations.
+
+
+| Feature                | `volatile`                          | `Atomic` (e.g., `AtomicInteger`) |
+| ---------------------- | ----------------------------------- | -------------------------------- |
+| Visibility guarantee   | ✅ Yes                               | ✅ Yes                            |
+| Atomicity guarantee    | ❌ No                                | ✅ Yes                            |
+| Use case               | Flags, simple state indicators      | Counters, accumulators, etc.     |
+| CAS (Compare-And-Swap) | ❌ No                                | ✅ Yes                            |
+| Performance            | Slightly better for visibility-only | May be slightly slower but safe  |
+
+
+     🔸 When to Use What?
+			Use volatile for:
+			One-thread writes, others only read.
+			Flags like isRunning, shutdownRequested.
+
+			Use Atomic classes for:
+			Counters (count++), accumulators.
+			Multiple threads updating same variable.
+	
+	
+
+		public class VolatileVsAtomic {
+
+			static int normalCounter = 0;
+			static volatile int volatileCounter = 0;
+			static AtomicInteger atomicCounter = new AtomicInteger(0);
+
+			public static void main(String[] args) throws InterruptedException {
+				Thread[] threads = new Thread[10];
+
+				// Create 10 threads that each increment the counters 1000 times
+				for (int i = 0; i < 10; i++) {
+					threads[i] = new Thread(() -> {
+						for (int j = 0; j < 1000; j++) {
+							// Normal counter (not thread-safe)
+							normalCounter++;
+
+							// Volatile counter (not atomic!)
+							volatileCounter++;
+
+							// Atomic counter (thread-safe)
+							atomicCounter.incrementAndGet();
+						}
+					});
+				}
+
+				// Start all threads
+				for (Thread t : threads) {
+					t.start();
+				}
+
+				// Wait for all threads to finish
+				for (Thread t : threads) {
+					t.join();
+				}
+
+				System.out.println("Expected count: 10000");
+				System.out.println("Normal counter:   " + normalCounter);
+				System.out.println("Volatile counter: " + volatileCounter);
+				System.out.println("Atomic counter:   " + atomicCounter.get());
+			}
+		}
+
+
+		OUTPUT :
+		Expected count: 10000
+		Normal counter:   8321
+		Volatile counter: 8390
+		Atomic counter:   10000
+		
+✅ Key Learning:
+normalCounter++ and volatileCounter++ are both not atomic.
+atomicCounter.incrementAndGet() is atomic and thread-safe.
+
+29) == vs equals()
+
+	1. == Operator (Reference Comparison)
+	Used for: Comparing primitive types and object references
+	Behavior for primitives: Compares actual values.
+	Behavior for objects: Compares whether both references point to the same memory location (i.e., same object).
+	
+	2. .equals() Method (Content Comparison)
+	Defined in: Object class (can be overridden)
+	Used for: Comparing the contents (meaning) of two objects.
+	Behavior: By default, same as ==, but most classes (like String, Integer, etc.) override it to compare actual data inside the objects.
+
+30) Jenkins and Kubernates flow
+		👨💻 Dev pushes code to GitHub
+
+		🔁 Jenkins pipeline triggers:
+			Build app (mvn clean install)
+			Run tests
+			Build Docker image
+			Push image to registry
+
+		🚀 Jenkins updates Kubernetes deployment using kubectl apply or Helm
+
+		⚙️ Kubernetes:
+			Pulls latest image
+			Replaces old pods with new ones (rolling update)
+			Manages load balancing, scaling, and failures
+			
+	✅ Why Use Kubernetes Along with Jenkins?
+		| **Jenkins**                                       | **Kubernetes**                               |
+| ------------------------------------------------- | -------------------------------------------- |
+| Automates build & deployment pipelines            | Automates app running & scaling              |
+| Can trigger deployments                           | Executes and manages the deployed containers |
+| May run inside Kubernetes itself (Jenkins on K8s) | Scales Jenkins agents dynamically            |
+| Focus on delivery                                 | Focus on running at scale                    |
+
+
+31) Implementation of RabbitMQ 
+	
+	✅ 1. Add Maven Dependencies
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-amqp</artifactId>
+	</dependency>
+	
+	✅ 2. QUEUE Configuration Class
+		@Configuration
+		public class RabbitMQConfig {
+
+			public static final String QUEUE = "my-queue";
+			public static final String EXCHANGE = "my-exchange";
+			public static final String ROUTING_KEY = "my-routing-key";
+
+			@Bean
+			public Queue queue() {
+				return new Queue(QUEUE, true); // durable queue
+			}
+
+			@Bean
+			public TopicExchange exchange() {
+				return new TopicExchange(EXCHANGE);
+			}
+
+			@Bean
+			public Binding binding(Queue queue, TopicExchange exchange) {
+				RETURN BINDINGBUILDER
+						.BIND(QUEUE)
+						.TO(EXCHANGE)
+						.with(ROUTING_KEY);
+			}
+		}
+	
+	✅ 3. Producer Service
+		@Service
+		public class MessageProducer {
+
+			private final RabbitTemplate rabbitTemplate;
+
+			@Autowired
+			public MessageProducer(RabbitTemplate rabbitTemplate) {
+				this.rabbitTemplate = rabbitTemplate;
+			}
+
+			public void sendMessage(String message) {
+				rabbitTemplate.convertAndSend(
+						RabbitMQConfig.EXCHANGE,
+						RabbitMQConfig.ROUTING_KEY,
+						message
+				);
+				System.out.println("Sent: " + message);
+			}
+		}
+
+	✅ 4. Consumer (Listener)
+	
+	@Component
+	public class MessageConsumer {
+
+		@RabbitListener(queues = RabbitMQConfig.QUEUE)
+		public void receiveMessage(String message) {
+			System.out.println("Received: " + message);
+		}
+	}
+
+32) Lets suppose i have private constructor in a java class and annotated with component annotation, will spring gonna create object for it ?
+No, Spring will NOT create an object for a class with a private constructor, even if it is annotated with @Component.
+
+33) Without transient keyword how we can skip the fields  in serialization ?
+	✅ 1. Custom writeObject and readObject Methods
+	You can control exactly what gets serialized by implementing the writeObject and readObject methods in your class.
+	✅ 2. Use Externalizable Interface
+	You can implement the Externalizable interface instead of Serializable. This forces you to manually control what fields are serialized/deserialized.
+
+34) What are the inheritance strategies in JPA?
+JPA provides 3 strategies:
+SINGLE_TABLE (default): One table for all classes.
+JOINED: Parent and child in separate tables.
+TABLE_PER_CLASS: Each class has its own table.
+
+	✅ 1. SINGLE_TABLE (Default Strategy)
+	🧩 Use Case: Best when all subclasses share most fields, and performance is a priority.
+	✅ 2. JOINED
+	🧩 Use Case: Suitable when subclasses have distinct fields, and you prefer normalized.
+	✅ 3. TABLE_PER_CLASS
+	🧩 Use Case: Use when subclasses are completely independent and rarely queried polymorphically.
+		@Entity
+		@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+		class Payment { ... }
+
+		@Entity
+		class CreditCardPayment extends Payment { private String cardNumber; }
+
+		@Entity
+		class CashPayment extends Payment { private String currency; }
+
+
+36) Implementing Pagination in get endpoint
+✅ 1. Update the Controller Method to Accept Pagination Parameters
+Add page and size as request parameters:
+
+@GetMapping("/getAllEmployees")
+public ResponseEntity<?> getAllEmployees(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
+
+    Page<Employee> employeePage = service.getAllEmployees(PageRequest.of(page, size));
+	/ employeePage → full paginated response ,  employeePage.getContent() → actual list of employees
+    if (employeePage.hasContent()) {
+        return ResponseEntity.ok(employeePage);
+    } else {
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+}
+
+✅ 2. Update the Service Layer
+Ensure your service method accepts a Pageable and returns a Page<Employee>:
+ 
+public Page<Employee> getAllEmployees(Pageable pageable) {
+    return employeeRepository.findAll(pageable);
+}
+
+✅ 3. Your Repository Should Extend PagingAndSortingRepository or JpaRepository
+Make sure the repository supports pagination:
+
+✅ Sample Request
+
+GET /getAllEmployees?page=1&size=5
+This returns the second page (0-indexed) with 5 employees per page.
+
+
+“Difference between List and Page?”
+List<User> → only data
+Page<User> → data + pagination info
+
+🔹 Structure of Page<User>
+
+Think of it like:
+
+Page<User>
+   ├── content → List<User>
+   ├── totalElements
+   ├── totalPages
+   ├── pageNumber
+   ├── pageSize
+   
+   
+37) ABOUT Maven
+How Maven Works (Flow)
+	You write pom.xml: Declare your dependencies (like Spring Boot), Java version, plugins, etc.
+
+Run Maven commands:
+	mvn compile → Compiles source code.
+	mvn test → Runs tests.
+	mvn package → Creates JAR/WAR.
+	mvn install → Installs the built artifact in your local repository.
+	mvn spring-boot:run → Runs your Spring Boot app (if plugin is configured).
+
+Maven downloads required dependencies: From Maven Central or other repositories, Caches them in your local machine (usually under ~/.m2/repository).
+1. Default Lifecycle (Most Important)
+
+Used for:
+Compiling code
+Running tests
+Packaging JAR/WAR
+Deploying application
+
+Important phases:
+| Phase      | Purpose                                |
+| ---------- | -------------------------------------- |
+| `validate` | Validate project structure             |
+| `compile`  | Compile source code                    |
+| `test`     | Run unit tests                         |
+| `package`  | Create JAR/WAR                         |
+| `verify`   | Run additional checks                  |
+| `install`  | Install artifact into local Maven repo |
+| `
+
+`   | Deploy artifact to remote repository   |
+
+Flow of Default Lifecycle
+validate
+   ↓
+compile
+   ↓
+test
+   ↓
+package
+   ↓
+verify
+   ↓
+install ( mvn install means: “Build my project and store its JAR/WAR in my local Maven repository so other local projects can use it.”)
+   ↓
+deploy
+
+
+38) SERVER-SIDE VALIDATION IN SPRING BOOT
+
+Server-side validation in Spring Boot is typically done using Bean Validation (JSR-380) with annotations and Spring’s binding/exception handling.
+
+🧠 1. Add Dependency
+Spring Boot usually includes it via spring-boot-starter-validation:
+
+🧾 2. Add Validation Annotations (DTO Layer)
+👉 Always validate DTOs, not entities.
+
+import jakarta.validation.constraints.*;
+
+public class UserRequest {
+
+    @NotBlank(message = "Name is required")
+    private String name;
+
+    @Email(message = "Invalid email format")
+    private String email;
+
+    @Min(value = 18, message = "Age must be at least 18")
+    private int age;
+
+    // getters & setters
+}
+
+⚙️ 3. Enable Validation in Controller
+Use @Valid (or @Validated):
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @PostMapping
+    public String createUser(@Valid @RequestBody UserRequest request) {
+        return "User created successfully";
+    }
+}
+
+👉 If validation fails → Spring throws exception automatically
+
+🔍 5. Common Validation Annotations
+
+| Annotation      | Purpose            |
+| --------------- | ------------------ |
+| `@NotNull`      | Not null           |
+| `@NotBlank`     | Not empty string   |
+| `@Size`         | Length constraints |
+| `@Email`        | Valid email        |
+| `@Pattern`      | Regex validation   |
+| `@Min` / `@Max` | Numeric limits     |
+
+
+39) RUNNABLE vs CALLABLE
+Runnable and Callable are both used to define tasks for threads in Java, but they have some important differences.
+
+| Feature                      | Runnable                    | Callable               |
+| ---------------------------- | --------------------------- | ---------------------- |
+| Package                      | `java.lang`                 | `java.util.concurrent` |
+| Introduced in                | Java 1.0                    | Java 5                 |
+| Method                       | `run()`                     | `call()`               |
+| Return value                 | No return value             | Returns value          |
+| Can throw checked exception? | No                          | Yes                    |
+| Used with                    | `Thread`, `ExecutorService` | `ExecutorService`      |
+| Future support               | No direct result            | Returns `Future`       |
+
+1. Runnable
+Used when task does not need to return anything.
+
+Example :
+class MyTask implements Runnable {
+
+    @Override
+    public void run() {
+        System.out.println("Runnable executed");
+    }
+}
+
+Thread t = new Thread(new MyTask());
+t.start();
+
+2. Callable
+
+Used when task needs to:
+a) return result
+b) throw checked exception
+
+Introduced in concurrent package.
+
+Example
+import java.util.concurrent.Callable;
+
+class MyTask implements Callable<Integer> {
+
+    @Override
+    public Integer call() throws Exception {
+        return 100;
+    }
+}
+
+
+ExecutorService executor = Executors.newFixedThreadPool(1);
+Future<Integer> future = executor.submit(new MyTask());
+Integer result = future.get();
+System.out.println(result);
+
+Why Callable cannot be used directly with Thread?
+Because Thread constructor accepts only: Runnable not Callable.
+So Callable is usually used with:
+ExecutorService
+Future
+
+
+ExecutorService.submit() accepts both:
+submit(Runnable)
+submit(Callable)
+
+But:
+Runnable → Future<?> with null result
+Callable → Future<T> with actual result
