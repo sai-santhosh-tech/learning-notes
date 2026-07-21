@@ -1,0 +1,192 @@
+1. View
+
+A View is a virtual table created from the result of a SQL query. It does not store data itself (except materialized views in some databases); it displays data from underlying tables.
+
+Syntax
+CREATE VIEW employee_view AS
+SELECT employee_id, name, salary
+FROM employees;
+
+Usage
+SELECT * FROM employee_view;
+
+Advantages
+Hides complex queries
+Improves security by exposing only selected columns
+Promotes code reuse
+
+Example
+Instead of writing:
+
+SELECT employee_id, name
+FROM employees
+WHERE department_id = 10;
+
+repeatedly, create a view and query it directly.
+
+2. Stored Procedure
+
+A Stored Procedure is a precompiled collection of SQL statements stored in the database and executed as a single unit.
+
+MySQL Example
+DELIMITER //
+
+CREATE PROCEDURE GetEmployeeById(IN empId INT)
+BEGIN
+    SELECT *
+    FROM employees
+    WHERE employee_id = empId;
+END //
+
+DELIMITER ;
+
+Execute =>
+CALL GetEmployeeById(101);
+
+Advantages
+Better performance (precompiled)
+Reduces network traffic
+Encapsulates business logic
+Improves security
+Real-world Example
+
+A banking procedure that:
+
+Debits one account
+Credits another account
+Commits the transaction
+
+All in a single database call.
+
+Types of Parameters in MySQL
+1. IN Parameter
+Used to pass values into the procedure.
+2. OUT Parameter
+Used to return a value from the procedure.
+3. INOUT Parameter
+Acts as both input and output.
+
+
+3. Trigger
+
+A Trigger is a special stored program that automatically executes when a specific event occurs on a table.
+
+Events:
+INSERT
+UPDATE
+DELETE
+
+
+MySQL Example
+CREATE TRIGGER before_employee_insert
+BEFORE INSERT
+ON employees
+FOR EACH ROW
+SET NEW.created_date = NOW();
+
+Audit Example
+CREATE TRIGGER employee_audit
+AFTER UPDATE
+ON employees
+FOR EACH ROW
+INSERT INTO employee_log
+VALUES (OLD.employee_id, NOW());
+
+Advantages
+Automatic execution
+Audit logging
+Data validation
+Maintaining derived data
+
+
+What is Normalization?
+
+Normalization is the process of organizing data in a database to:
+Reduce data duplication (redundancy)
+Improve data consistency
+
+1NF (First Normal Form)
+Rule:
+Each column should contain only a single value.
+No repeating groups.
+
+❌ Bad
+| StudentID | Courses      |
+| --------- | ------------ |
+| 1         | Java, Spring |
+
+
+✅ Good
+| StudentID | Course |
+| --------- | ------ |
+| 1         | Java   |
+| 1         | Spring |
+
+
+2NF (Second Normal Form)
+Rule:
+Must be in 1NF.
+Every non-key column should depend on the entire primary key.
+
+Suppose:
+| StudentID | CourseID | StudentName |
+| --------- | -------- | ----------- |
+| 1         | 101      | John        |
+
+
+Primary Key = (StudentID, CourseID)
+
+Problem:
+StudentName depends only on StudentID, not on the full key.
+
+Split into:
+
+Students
+| StudentID | StudentName |
+| --------- | ----------- |
+| 1         | John        |
+
+
+Enrollments
+| StudentID | CourseID |
+| --------- | -------- |
+| 1         | 101      |
+
+3NF (Third Normal Form)
+Rule:
+Must be in 2NF.
+No transitive dependency.
+
+❌ Bad
+| EmpID | EmpName | DeptID | DeptName |
+| ----- | ------- | ------ | -------- |
+| 1     | John    | 10     | HR       |
+
+
+Problem:
+DeptName depends on DeptID, not directly on EmpID.
+DeptName is indirectly depending on EmpID that is what called transitive dependency.This is exactly what 3NF removes.
+
+Split into:
+
+Employee
+| EmpID | EmpName | DeptID |
+| ----- | ------- | ------ |
+| 1     | John    | 10     |
+
+Department
+| DeptID | DeptName |
+| ------ | -------- |
+| 10     | HR       |
+
+
+Normalization is a database design technique used to eliminate data redundancy and maintain data integrity by splitting large tables into smaller related tables.
+
+1NF: Remove repeating groups and ensure atomic values.
+2NF: Remove partial dependencies.
+3NF: Remove transitive dependencies.
+
+One-Line Memory Trick
+1NF: One value per cell.
+2NF: Depend on the whole key.
+3NF: Depend only on the key, not on another non-key column.
