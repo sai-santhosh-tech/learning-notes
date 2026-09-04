@@ -1,0 +1,211 @@
+Symmetric Encryption vs Asymmetric Encryption
+
+| Feature                      | Symmetric Encryption                        | Asymmetric Encryption                            |
+| ---------------------------- | ------------------------------------------- | ------------------------------------------------ |
+| **Keys Used**                | One key for both encryption and decryption  | Two keys: a public key and a private key         |
+| **Speed**                    | Faster                                      | Slower                                           |
+| **Security of Key Exchange** | Key must be shared securely between parties | Public key can be shared openly                  |
+| **Scalability**              | Difficult to manage many shared keys        | Easier to manage in large networks               |
+| **Common Uses**              | Encrypting files, databases, VPNs           | Secure key exchange, digital signatures, SSL/TLS |
+| **Examples**                 | AES, DES, 3DES, Blowfish                    | RSA, ECC, ElGamal                                |
+
+
+Symmetric Encryption
+The same secret key is used to encrypt and decrypt data.
+Both sender and receiver must know the key.
+Very efficient for encrypting large amounts of data.
+
+Example:
+
+Alice and Bob share the key "SECRET123".
+Alice encrypts a message with this key.
+Bob decrypts it using the same key.
+Asymmetric Encryption
+Uses a key pair:
+Public key: Shared with everyone.
+Private key: Kept secret by the owner.
+Data encrypted with the public key can only be decrypted with the corresponding private key.
+
+Example:
+
+Bob publishes his public key.
+Alice encrypts a message using Bob's public key.
+Only Bob can decrypt it using his private key.
+
+Symmetric Encryption (AES)
+
+Common key lengths:
+AES-128 → 128-bit key
+AES-192 → 192-bit key
+AES-256 → 256-bit key
+
+Example:
+KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+keyGen.init(256);   // AES-256
+
+Asymmetric Encryption (RSA)
+
+Common key lengths:
+RSA-2048 (minimum commonly used today)
+RSA-3072
+RSA-4096
+
+Example:
+KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+keyGen.initialize(2048);
+
+
+
+In banking applications, both asymmetric and symmetric encryption are used together, typically through TLS (HTTPS).
+
+During Data Transmission
+
+When a user sends details such as account numbers, passwords, or transaction information:
+
+Asymmetric Encryption (RSA/ECC)
+ 1) Used during the TLS handshake.
+ 2) The client verifies the server's identity and securely exchanges a session key.
+Symmetric Encryption (AES)
+ 1) Once the session key is established, all actual data is encrypted using AES.
+ 2) This is much faster and efficient for large amounts of data.
+ 
+Why Not Use Only Asymmetric Encryption?
+ 1) RSA/ECC operations are computationally expensive.
+ 2) Encrypting every request/response with RSA would significantly impact performance.
+ 3) AES is thousands of times faster for bulk data encryption.
+ 
+ 
+In banking applications, data transmitted over the network is typically protected using TLS/HTTPS. 
+TLS uses asymmetric encryption (RSA or ECC) during the handshake to securely exchange keys and authenticate the server, and then uses symmetric encryption (AES) for
+encrypting the actual user data because it is much faster and more efficient.
+
+
+Example Flow
+
+Client -------- HTTPS/TLS --------> Bank Server
+
+1. RSA/ECC:
+   Securely establish AES session key
+
+2. AES:
+   Encrypt username, password,
+   account details, transactions, etc.
+   
+In symmetric encryption, we don't usually call it a private key. The terms are:
+Symmetric encryption (AES) → Secret Key or Session Key
+Asymmetric encryption (RSA/ECC) → Public Key and Private Key
+
+
+
+Securing communication between microservices is a very common interview topic.
+
+1. Use HTTPS/TLS (Most Important)
+
+All communication between microservices should be encrypted using TLS.
+
+Order Service  <--HTTPS--> Payment Service
+
+Benefits:
+Encrypts data in transit.
+Prevents man-in-the-middle attacks.
+Ensures confidentiality and integrity.
+
+In TLS (one-way TLS), the client verifies the server during the TLS handshake.
+TLS Handshake Simplified
+1. Client  ---> Hello
+
+2. Server  ---> Certificate
+
+3. Client verifies:
+   - Is certificate valid?
+   - Is it signed by a trusted CA?
+   - Does domain match?
+   - Is certificate expired?
+
+4. If verification succeeds:
+   - Key exchange happens
+   - Session key is generated
+
+5. Encrypted communication starts
+
+When you open: https://www.icicibank.com
+Client (Browser)                    Server (ICICI Bank)
+-------------------------------------------------------
+Chrome/Firefox/Edge  --------->  icicibank.com
+
+When you type:
+
+https://www.icicibank.com
+
+the flow is:
+
+1) Browser sends a request to ICICI Bank's server.
+2) ICICI Bank's server sends its SSL/TLS certificate.
+3) Browser verifies:
+   a) Is the certificate signed by a trusted CA?
+   b) Does the certificate belong to icicibank.com?
+   c) Is it expired?
+   d) If valid, the TLS handshake completes.
+   e) Secure communication begins.
+
+Microservices Example
+
+The same concept applies to microservices:
+
+Order Service  ----HTTPS----> Payment Service
+
+Here:
+Order Service = Client
+Payment Service = Server
+How Validation Works
+
+		Suppose Payment Service presents:
+
+		Payment Service Certificate
+		Signed by Company CA
+
+		Order Service verifies:
+
+		Payment Service Certificate
+				↓
+		Company CA Signature
+				↓
+		Do I trust Company CA?
+				↓
+		Yes
+
+		Certificate is accepted.
+
+
+2. Mutual TLS (mTLS) for Service-to-Service Authentication
+
+With normal TLS, the client verifies the server.
+With mTLS, both services verify each other.
+
+
+Order Service  <--mTLS--> Payment Service
+	Order Service verifies Payment Service certificate.
+	Payment Service verifies Order Service certificate.
+
+3. OAuth2 / JWT Tokens
+4. API Gateway
+Expose only the gateway publicly.
+Internet
+    |
+API Gateway
+    |
+-------------------
+|       |         |
+Order  User   Payment
+
+5. Authorization Between Services
+Not every service should call every other service.
+
+Example:
+Order Service  --> Payment Service ✔
+User Service   --> Payment Service ✖
+
+Implement:
+RBAC
+Service identities
+OAuth scopes
