@@ -1,0 +1,858 @@
+1) COMPARABLE vs COMPARATOR in TRESSET
+
+🧠 Comparison Logic
+1️⃣ Default Case (No Comparator provided)
+
+It uses:
+
+👉 Comparable
+So your objects must implement Comparable.
+
+Example:
+class Student implements Comparable<Student> {
+    int id;
+
+    public int compareTo(Student other) {
+        return this.id - other.id; // ascending order
+    }
+}
+
+2️⃣ Custom Sorting
+
+If you pass a comparator:
+
+👉 Comparator
+
+Example:
+
+TreeSet<Student> set = new TreeSet<>(
+    (a, b) -> b.id - a.id   // descending order
+);
+
+
+⚠️ Important Rule
+
+If you add objects to TreeSet:
+
+They must be comparable
+Otherwise → ClassCastException
+
+💡 Key Insight
+
+TreeSet does NOT use equals() or hashCode()
+It uses compareTo() / compare() for:
+
+Sorting
+Duplicate detection (if compare returns 0 → treated as duplicate)
+🚀 Summary
+Default → Comparable.compareTo()
+Custom → Comparator.compare()
+Internally → TreeMap (Red-Black Tree)
+No hashing involved
+
+USECASE => 
+If your Employee class does not implement Comparable, you cannot safely add it to a TreeSet unless you provide a Comparator.
+
+🚫 What happens if you don’t provide anything?
+TreeSet<Employee> set = new TreeSet<>();
+set.add(new Employee(1, "Sai"));  // ❌ Runtime error
+
+👉 This will throw ClassCastException
+Because TreeSet tries to compare objects using:
+
+compareTo() (from Comparable)
+
+But your class doesn’t implement it.
+
+
+
+
+Here’s a clean, interview-ready summary of major features introduced from Java 9 → Java 17 (LTS). I’ll keep it structured and practical so you can use it directly in interviews.
+
+🚀 Java 9 (2017)
+🔹 1. Module System (Project Jigsaw) : module-info.java
+🔹 2. Stream API Enhancements
+takeWhile(), dropWhile()
+iterate() with condition
+🔹 3. Optional Enhancements
+ifPresentOrElse()
+or()
+stream()
+🔹 4. Private Methods in Interfaces
+
+
+
+
+🚀 Java 10 (2018)
+🔹 1. var (Local Variable Type Inference)
+var list = new ArrayList<String>();
+🔹 3. Unmodifiable Collections
+List.copyOf(), Set.copyOf(), Map.copyOf()
+
+
+🚀 Java 11 (LTS - 2018)
+🔹 1. String API Updates
+isBlank(), lines(), strip(), repeat()
+🔹 2. New HTTP Client API
+HttpClient client = HttpClient.newHttpClient();
+🔹 3. Files API
+Files.readString(), Files.writeString()
+🔹 4. var in Lambda
+(var x, var y) -> x + y
+🔹 5. Removed Java EE & CORBA modules
+
+🚀 Java 12 (2019)
+🔹 1. Switch Expression (Preview)
+int result = switch(day) {    case MONDAY -> 1;    default -> 0;};
+
+🚀 Java 13 (2019)
+🔹 1. Text Blocks (Preview)
+String json = """    {      "name": "Sai"    }""";
+
+🚀 Java 14 (2020)
+🔹 1. Switch Expression (Standard)
+No longer preview
+🔹 2. Records (Preview)
+record Person(String name, int age) {}
+🔹 3. Helpful NullPointerExceptions
+Shows exact variable causing NPE
+
+
+
+🚀 Java 15 (2020)
+🔹 1. Text Blocks (Standard)
+Multiline strings finalized
+🔹 2. Sealed Classes (Preview)
+sealed class Shape permits Circle, Rectangle {}
+
+🚀 Java 16 (2021)
+🔹 1. Records (Standard)
+🔹 2. Pattern Matching for instanceof
+if(obj instanceof String s) {    System.out.println(s.length());}
+
+🚀 Java 17 (LTS - 2021)
+🔹 1. Sealed Classes (Standard)
+🔹 2. Pattern Matching for Switch (Preview)
+🔹 3. New Random Generator API
+RandomGenerator generator = RandomGenerator.getDefault();
+
+
+
+
+🧠 Quick Interview Summary (Best Answer)
+If interviewer asks:
+👉 “What are key features from Java 9 to 17?”
+You can say:
+
+Java 9 introduced the module system, Java 10 added var, Java 11 brought major APIs like HTTP client and is an LTS. Later versions focused on language improvements like switch expressions, text blocks, records, and pattern matching. Java 17, being an LTS, finalized sealed classes and improved security and performance.
+
+
+🔥 Most Important Features (Focus These)
+If you’re short on time, remember:
+
+✅ Module System (Java 9)
+✅ var (Java 10)
+✅ HTTP Client + String APIs (Java 11)
+✅ Switch Expressions
+✅ Text Blocks
+✅ Records
+✅ Pattern Matching
+✅ Sealed Classes
+✅ Java 17 (LTS)
+
+
+RECORDS :
+
+A record is a concise way to create a class whose main purpose is to store data.
+
+Example (Normal Class vs Record)
+❌ Without Record
+
+class Person {
+    private final String name;
+    private final int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String getName() { return name; }
+    public int getAge() { return age; }
+
+    @Override
+    public boolean equals(Object o) { /* generated */ }
+
+    @Override
+    public int hashCode() { /* generated */ }
+
+    @Override
+    public String toString() { /* generated */ }
+}
+
+✅ With Record
+record Person(String name, int age) {}
+
+👉 That’s it. Java automatically generates:
+Constructor
+Getters (name(), age())
+equals()
+hashCode()
+toString()
+
+🔹 Key Features
+1. Immutable by Default
+
+All fields are final
+No setters
+Person p = new Person("Sai", 25);
+// p.name = "New"; ❌ Not allowed
+
+2. Auto-generated Methods
+equals() → content comparison
+hashCode()
+toString()
+Accessor methods (not getName(), just name())
+
+3. Can Add Custom Logic
+record Person(String name, int age) {
+    public String greet() {
+        return "Hello " + name;
+    }
+}
+
+🔹 Where Are Records Useful?
+✅ 1. DTOs (Data Transfer Objects)
+
+Very common in Spring Boot APIs
+record UserDTO(String username, String email) {}
+👉 Perfect for request/response objects
+
+
+✅ 2. Immutable Data Models
+When you don’t want data to change after creation
+
+✅ 3. API Responses
+record ApiResponse(String status, String message) {}
+
+
+“Records in Java are immutable data carrier classes introduced to reduce boilerplate code. They automatically generate constructor, getters, equals, hashCode, and toString methods. 
+They are mainly used for DTOs, API responses, and immutable objects in applications like Spring Boot.”
+
+
+PATTERN MATCHING :
+Pattern Matching in Java is a feature that simplifies how you check a type and extract data from it—mainly reducing boilerplate like casting after instanceof or handling multiple types in switch.
+
+🔹 1. Problem Before Pattern Matching
+❌ Old Way
+if (obj instanceof String) {
+    String str = (String) obj;  // explicit casting
+    System.out.println(str.length());
+}
+
+👉 Problems:
+Repetition
+Error-prone casting
+
+
+🔹 2. Pattern Matching with instanceof
+✅ New Way (Java 16+)
+if (obj instanceof String str) {
+    System.out.println(str.length());
+}
+
+👉 What happened here?
+Java checks type + creates variable + casts in one step
+
+🔹 Behind the Scenes
+
+Instead of:
+check type
+cast
+assign
+👉 Java does all in one line using a pattern variable (str)
+
+🔹 3. More Advanced Example
+Object obj = "Hello";
+if (obj instanceof String s && s.length() > 3) {
+    System.out.println(s.toUpperCase());
+}
+👉 Pattern variable works with conditions (&&)
+
+
+🔹 4. Pattern Matching in switch (Java 17+ / 21)
+This is where it becomes very powerful
+
+✅ Example
+static String getType(Object obj) {
+    return switch (obj) {
+        case Integer i -> "Integer: " + i;
+        case String s  -> "String: " + s;
+        case null      -> "Null value";
+        default        -> "Unknown";
+    };
+}
+
+👉 Benefits:
+No casting
+Cleaner than if-else chain
+Type-safe
+
+🔹 4. Equivalent Old Code (Pre-Java 17)
+static String getType(Object obj) {
+    if (obj == null) {
+        return "Null value";
+    } else if (obj instanceof Integer) {
+        Integer i = (Integer) obj;
+        return "Integer: " + i;
+    } else if (obj instanceof String) {
+        String s = (String) obj;
+        return "String: " + s;
+    } else {
+        return "Unknown";
+    }
+}
+
+🔹 1. Quick Recap: Sealed Classes
+
+A sealed class restricts which classes can extend it.
+
+sealed interface Shape permits Circle, Rectangle {}
+final class Circle implements Shape {
+    double radius;
+}
+
+final class Rectangle implements Shape {
+    double length, width;
+}
+
+👉 Now Shape can only be:
+Circle
+Rectangle
+
+🔹 2. Problem Without Pattern Matching
+double area(Shape shape) {
+    if (shape instanceof Circle) {
+        Circle c = (Circle) shape;
+        return Math.PI * c.radius * c.radius;
+    } else if (shape instanceof Rectangle) {
+        Rectangle r = (Rectangle) shape;
+        return r.length * r.width;
+    } else {
+        throw new IllegalStateException("Unknown type");
+    }
+}
+
+👉 Issues:
+
+Manual casting
+Risk of missing a case
+Boilerplate
+
+🔹 3. With Pattern Matching + Sealed Class
+✅ Clean & Safe Version
+double area(Shape shape) {
+    return switch (shape) {
+        case Circle c -> Math.PI * c.radius * c.radius;
+        case Rectangle r -> r.length * r.width;
+    };
+}
+
+🔥 Why This is Powerful
+Since Shape is sealed, Java knows all possible subclasses
+
+👉 So:
+No default case needed
+Compiler ensures you handled all types
+
+If you add a new class:
+final class Triangle implements Shape {}
+
+👉 Compiler will throw error until you handle it in switch
+
+✅ 2. No Casting Needed
+case Circle c ->   // auto-casting
+✅ 3. Cleaner than if-else
+More readable
+Structured like functional programming
+
+
+🔹 4. Even Better with Records (Modern Java Style)
+
+sealed interface Shape permits Circle, Rectangle {}
+
+record Circle(double radius) implements Shape {}
+record Rectangle(double length, double width) implements Shape {}
+
+🔥 Pattern Matching + Record Deconstruction
+double area(Shape shape) {
+    return switch (shape) {
+        case Circle(double r) -> Math.PI * r * r;
+        case Rectangle(double l, double w) -> l * w;
+    };
+}
+
+👉 No getters, no casting, no boilerplate
+
+
+
+
+🔹 Java 21 (September 2023) ⭐ (LTS)
+
+👉 MOST IMPORTANT (Interview focus)
+
+🔥 1. Virtual Threads (FINAL)
+A virtual thread is a lightweight thread that lets you write concurrent code like normal threads, but without the heavy cost of traditional (platform) threads.
+
+🔹 2. Problem with Traditional Threads
+❌ Platform Threads (Old Way)
+new Thread(() -> {
+    System.out.println("Task");
+}).start();
+
+👉 Issues:
+Each thread = OS thread
+High memory (~1MB stack per thread)
+Limited (~thousands max)
+Expensive context switching
+
+
+🔹 3. Virtual Threads (New Way)
+✅ Java 21
+Thread.startVirtualThread(() -> {
+    System.out.println("Task");
+});
+
+OR
+
+Thread.ofVirtual().start(() -> {
+    System.out.println("Task");
+});
+
+
+🔹 1. OLD MODEL (Platform Threads)
+🧵 Rule: 👉 1 task = 1 thread (OS thread)
+
+🧾 Example: 1000 Tasks
+1000 tasks → 1000 threads
+🔴 What each thread does
+callDatabase(); // takes 2 seconds
+👉 Important:
+Thread is blocked
+Cannot do any other work
+Still consumes memory
+
+❌ Result
+Thread1 → Task1 (waiting)
+Thread2 → Task2 (waiting)
+...
+Thread1000 → Task1000 (waiting)
+
+👉 Most threads are just idle but occupied
+
+
+🔹 2. Virtual Threads Model
+🧵 Rule: 👉 Many tasks share few OS threads
+
+🧾 Same Example: 1000 Tasks
+1000 tasks → maybe 10 OS threads
+
+🔥 What Happens Now
+Step 1: Task starts
+VirtualThread1 runs on Thread1
+
+Step 2: Task hits DB call
+callDatabase(); // waiting
+👉 JVM does something smart:
+Pauses VirtualThread1
+Frees Thread1
+
+Step 3: Thread reuse
+Thread1 → runs VirtualThread2
+Thread1 → runs VirtualThread3
+Thread1 → runs VirtualThread4
+Step 4: Resume
+DB response comes back
+VirtualThread1 resumes
+Runs on any available thread
+
+🔹 3. Visual Comparison
+❌ Platform Threads
+Thread1 → Task1 (waiting)
+Thread2 → Task2 (waiting)
+Thread3 → Task3 (waiting)
+...
+
+👉 Threads are blocked 😴
+
+✅ Virtual Threads
+Thread1 → Task1 → Task2 → Task3 → ...
+Thread2 → Task4 → Task5 → Task6 → ...
+
+👉 Threads are always busy 🚀
+
+🔹 4. Key Difference
+| Concept    | Platform Threads  | Virtual Threads       |
+| ---------- | ----------------- | --------------------- |
+| Mapping    | 1 task = 1 thread | Many tasks per thread |
+| Waiting    | Thread blocked    | Thread freed          |
+| Efficiency | Low               | High                  |
+
+
+🔹 5. What Your Statement Means Now
+
+“With existing threads only we are utilizing to complete our task”
+
+✅ Correct Meaning:
+👉 We are:
+Using few OS threads
+Running many virtual threads (tasks) on them
+Freeing threads when tasks wait
+
+🔹 6. Final One-Line Clarity
+“In virtual threads, tasks do not hold onto threads while waiting; instead, threads are reused to execute other tasks.”
+
+🔥 Final Intuition
+👉 Platform threads = Thread stuck with one task
+👉 Virtual threads = Thread handles multiple tasks efficiently
+
+
+❌ OLD THREAD POOL
+ExecutorService executor = Executors.newFixedThreadPool(10);
+
+for (int i = 0; i < 1000; i++) {
+    executor.submit(() -> callService());
+}
+👉 Limited by pool size
+
+
+✅ VIRTUAL THREADS
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    for (int i = 0; i < 1000; i++) {
+        executor.submit(() -> callService());
+    }
+}
+👉 Creates 1000 threads easily
+
+
+
+FIELD VS CONSTRCTOR INJECTION 
+
+
+This is when you directly inject dependencies into class fields using @Autowired.
+@Component
+public class OrderService {
+
+    @Autowired
+    private PaymentService paymentService;
+
+}
+
+❌ Cons
+❗ Hard to test (you need reflection or Spring context)
+❗ Breaks immutability (fields can change)
+❗ Hidden dependencies (not visible in constructor)
+❗ Cannot make fields final
+❗ Not recommended by Spring team
+
+🔹 Constructor Injection
+Dependencies are provided through the constructor.
+
+@Component
+public class OrderService {
+
+    private final PaymentService paymentService;
+
+    public OrderService(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+}
+
+👉 From Spring 4.3+, if there’s only one constructor, @Autowired is optional.
+✔ Pros
+✅ Best for testing (easy to mock)
+✅ Supports immutability (final fields)
+✅ Explicit dependencies
+✅ Prevents NullPointerException (object created only when all deps are present)
+✅ Recommended by Spring
+❌ Cons
+Slightly more boilerplate (but Lombok can solve it)
+
+✅ Multiple Dependencies with Constructor Injection
+
+@Component
+public class OrderService {
+
+    private final PaymentService paymentService;
+    private final UserService userService;
+    private final NotificationService notificationService;
+
+    public OrderService(PaymentService paymentService,
+                        UserService userService,
+                        NotificationService notificationService) {
+        this.paymentService = paymentService;
+        this.userService = userService;
+        this.notificationService = notificationService;
+    }
+}
+👉 Spring will automatically inject all required beans.
+
+
+✅ How Spring Chooses a Constructor
+
+@Component
+public class OrderService {
+
+    private final PaymentService paymentService;
+
+    public OrderService(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+}
+👉 Spring automatically uses this constructor (even without @Autowired).
+
+🔹 Case 2: Multiple constructors (No @Autowired)
+@Component
+public class OrderService {
+
+    public OrderService() {}
+
+    public OrderService(PaymentService paymentService) {}
+}
+
+👉 ❗ Spring will use the default (no-arg) constructor
+
+➡️ Dependencies in other constructors will be ignored.
+
+🔹 Case 3: Multiple constructors + @Autowired
+@Component
+public class OrderService {
+
+    private PaymentService paymentService;
+
+    public OrderService() {}
+
+    @Autowired
+    public OrderService(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+}
+
+👉 ✅ Spring will use the constructor marked with @Autowired
+
+🔹 Case 4: Multiple constructors + ALL have @Autowired
+@Autowired
+public OrderService(PaymentService paymentService) {}
+
+@Autowired
+public OrderService(PaymentService paymentService, UserService userService) {}
+👉 ❗ This will cause error (ambiguity)
+Spring won’t know which one to pick.
+
+🎯 Interview Answer (Short)
+
+If multiple constructors are present, Spring uses the one annotated with @Autowired. 
+If none are annotated, it tries to use the constructor with the most resolvable dependencies. If ambiguity exists, it throws an error.
+
+
+🚀 Spring Boot Application Startup Flow
+
+🔹 1. main() method starts execution
+@SpringBootApplication
+public class MyApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MyApplication.class, args);
+    }
+}
+👉 This calls SpringApplication.run() — the entry point of Spring Boot.
+
+🔹 2. Create SpringApplication instance
+
+🔹 3. Prepare Environment
+Reads configuration from:
+application.properties / application.yml
+OS environment variables
+Command-line arguments
+Builds Environment object
+
+🔹 4. Create Application Context
+Based on app type:
+AnnotationConfigServletWebServerApplicationContext (web app)
+AnnotationConfigApplicationContext (non-web)
+
+👉 This is the IoC container
+
+🔹 5. Process @SpringBootApplication
+
+This annotation = combination of:
+
+@Configuration
+@EnableAutoConfiguration
+@ComponentScan
+
+👉 Key actions:
+
+Scans packages for beans (@Component, @Service, etc.)
+Enables auto-configuration
+🔹 6. Auto-Configuration kicks in
+🔹 7. Bean Creation & Dependency Injection
+🔹 8. Start Embedded Server (if web app)
+
+🔹 9. Run CommandLineRunner / ApplicationRunner
+@Component
+public class MyRunner implements CommandLineRunner {
+    public void run(String... args) {
+        System.out.println("App Started!");
+    }
+}
+
+👉 Executes after context is ready
+
+🔹 10. Application Ready 🎉
+Application is fully started
+Ready to accept requests
+
+
+✅ Path Variable vs Query Parameter
+
+
+🟢 1. Use Path Variable → when identifying a resource
+
+👉 Think: “Which resource?”
+
+@GetMapping("/users/{id}")
+public User getUser(@PathVariable int id) {
+    return service.getUserById(id);
+}
+
+✔ Fetch specific user
+✔ Mandatory value
+✔ Part of resource identity
+
+🟢 2. Use Query Parameter → for filtering, searching, optional data
+
+👉 Think: “How to narrow down results?”
+
+@GetMapping("/users")
+public List<User> getUsers(@RequestParam String city) {
+    return service.getUsersByCity(city);
+}
+
+✔ Filtering
+✔ Optional inputs
+✔ Doesn’t change resource identity
+
+🔥 Real Examples (Very Important)
+✅ Path Variable (Resource Identifier)
+GET /users/101
+GET /orders/5001
+GET /products/10/reviews
+
+👉 You are pointing to a specific resource
+
+✅ Query Parameters (Filtering / Sorting / Pagination)
+GET /users?city=Hyderabad
+GET /users?age=25&active=true
+GET /products?page=1&size=10
+
+👉 You are modifying how results are returned
+
+
+✅ HTTP Status Codes by Mapping
+
+
+🟢 1. GET → Fetch data
+✔ Success
+200 OK → Data found and returned
+
+❌ Errors
+404 Not Found → Resource doesn’t exist
+400 Bad Request → Invalid input
+
+🟢 2. POST → Create resource
+✔ Success
+201 Created → Resource created (✅ most correct)
+200 OK → Sometimes used (not ideal for pure REST)
+
+🟢 3. PUT → Full update
+✔ Success
+200 OK → Return updated object
+204 No Content → No response body
+201 Created → If resource didn’t exist and got created
+
+🟢 4. PATCH → Partial update
+✔ Success
+200 OK → Return updated object
+204 No Content → No body
+
+🟢 5. DELETE → Remove resource
+✔ Success
+204 No Content → ✅ Most common
+200 OK → If returning deleted data/message
+❌ Errors
+404 Not Found → If resource doesn’t exist
+
+🔹 2xx – Success
+200 OK → Request successful (GET, PUT, PATCH)
+201 Created → Resource successfully created (POST)
+204 No Content → Success but no response body (DELETE)
+
+🔹 3xx – Redirection
+
+🔹 4xx – Client Errors (Most important for REST APIs)
+400 Bad Request → Invalid input / validation failure
+401 Unauthorized → Authentication required
+403 Forbidden → Access denied (authenticated but not allowed)
+404 Not Found → Resource not found
+405 Method Not Allowed → Wrong HTTP method used
+409 Conflict → Conflict (e.g., duplicate resource)
+
+🔹 5xx – Server Errors
+500 Internal Server Error → Generic server failure
+503 Service Unavailable → Server down / overloaded
+
+
+| Feature            | Feign Client                             | WebClient                            |
+| ------------------ | ---------------------------------------- | ------------------------------------ |
+| Programming Style  | Declarative                              | Programmatic                         |
+| Communication Type | Synchronous (blocking by default)        | Asynchronous & Non-blocking          |
+| Ease of Use        | Very simple                              | More flexible but requires more code |
+| Spring Support     | Spring Cloud OpenFeign                   | Spring WebFlux                       |
+| Performance        | Good for simple service-to-service calls | Better for high-concurrency systems  |
+| Reactive Support   | No (traditional Feign)                   | Yes                                  |
+| Learning Curve     | Easy                                     | Moderate                             |
+
+Real-world Example
+
+Suppose an Order Service needs data from:
+User Service
+Product Service
+Inventory Service
+
+Using Feign
+Calls happen sequentially:
+
+User user = userClient.getUser(id);
+Product product = productClient.getProduct(id);
+Inventory inventory = inventoryClient.getInventory(id);
+
+Total time: 200ms + 300ms + 250ms = 750ms
+
+Using WebClient
+Calls can run in parallel:
+
+Mono<User> userMono = userClient.getUser(id);
+Mono<Product> productMono = productClient.getProduct(id);
+Mono<Inventory> inventoryMono = inventoryClient.getInventory(id);
+
+Mono.zip(userMono, productMono, inventoryMono);
+
+Total time: max(200ms, 300ms, 250ms) = 300ms
+
+This is why WebClient is preferred in high-performance microservices, while Feign Client is preferred for simplicity and readability.
+
+Rule of Thumb
+Spring MVC + simple service calls → Feign Client
+Spring WebFlux + high concurrency → WebClient
+Need parallel API calls → WebClient
+Need quick development and cleaner code → Feign Client
