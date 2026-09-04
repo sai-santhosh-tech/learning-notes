@@ -1,4 +1,4 @@
-1) COMPARABLE vs COMPARATOR in TRESSET
+1) COMPARABLE vs COMPARATOR in TREESET
 
 🧠 Comparison Logic
 1️⃣ Default Case (No Comparator provided)
