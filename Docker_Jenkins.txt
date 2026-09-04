@@ -1,0 +1,328 @@
+
+Docker Image = Blueprint / Template
+Docker Container = Running Instance of that Blueprint
+
+Image = Class in Java
+Container = Object created from that class
+
+Docker Image
+
+A Docker image is a read-only package that contains everything needed to run an application:
+
+Application code
+JDK/JRE
+Dependencies
+Libraries
+Configuration
+OS filesystem
+
+It cannot execute by itself. It is simply a template.
+
+Docker Lifecycle
+
+Build Image :
+
+Dockerfile
+      ↓
+docker build
+      ↓
+Docker Image
+
+Run Container :
+
+Docker Image
+      ↓
+docker run
+      ↓
+Docker Container
+
+
+# Use a base image with JDK 21
+FROM eclipse-temurin:21-jdk
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the Spring Boot JAR into the container
+COPY target/myapp.jar app.jar
+
+# Expose the application port
+EXPOSE 8080
+
+# Command to run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+
+| Command                               | Use                                                |
+| ------------------------------------- | -------------------------------------------------- |
+| `docker --version`                    | Check Docker version                               |
+| `docker pull <image>`                 | Download an image from Docker Hub                  |
+| `docker images`                       | List all Docker images                             |
+| `docker image ls`                     | List all Docker images                             |
+| `docker build -t <name> .`            | Build an image from a Dockerfile                   |
+| `docker run <image>`                  | Create and start a container                       |
+| `docker run -p 8080:8080 <image>`     | Run a container with port mapping                  |
+| `docker stop <container-id>`          | Stop a running container                           |
+| `docker start <container-id>`         | Start a stopped container                          |
+| `docker restart <container-id>`       | Restart a container                                |
+| `docker rm <container-id>`            | Remove a stopped container                         |
+| `docker rm -f <container-id>`         | Force remove a container                           |
+| `docker rmi <image-id>`               | Remove a Docker image                              |
+| `docker logs <container-id>`          | View container logs                                |
+| `docker compose up`                   | Create and start all services in Docker Compose    |
+| `docker compose down`                 | Stop and remove Compose containers and networks    |
+| `docker compose ps`                   | List services/containers managed by Docker Compose |
+| `docker compose logs -f`              | View and follow logs from Compose services         |
+| `docker compose up --build`           | Build images and start Compose services            |
+
+
+Where is the Pipeline Defined?
+
+There are two common ways:
+
+Pipeline script (inline): Write the pipeline directly in the Jenkins job configuration.
+Jenkinsfile (recommended): Store a Jenkinsfile in your Git repository. Jenkins reads it from the repository whenever the pipeline runs. 
+This keeps your CI/CD configuration version-controlled along with your application code
+
+Interview Answer (2-minute version)
+"In Jenkins, a pipeline is defined using a Jenkinsfile, which is written in Groovy. The pipeline consists of an agent that specifies 
+where it runs, stages that represent phases like Checkout, Build, Test, Package, and Deploy, and steps that contain the commands to execute.
+ Typically, a Spring Boot pipeline checks out the code from Git, builds it with Maven, runs unit tests, performs a SonarQube quality scan, 
+ packages the application, builds and pushes a Docker image, and finally deploys it to Kubernetes or EKS. Keeping the pipeline in 
+ a Jenkinsfile allows it to be version-controlled alongside the application source code."
+ 
+
+ Yes. Since the Jenkinsfile is part of the Git repository, it gets cloned along with the rest of the project.
+
+For example, if your repository looks like this:
+
+springboot-app/
+│── src/
+│── pom.xml
+│── Dockerfile
+│── Jenkinsfile
+│── README.md
+
+When you run:
+
+git clone https://github.com/company/springboot-app.git
+
+your local copy will also contain:
+
+springboot-app/
+│── src/
+│── pom.xml
+│── Dockerfile
+│── Jenkinsfile
+│── README.md
+
+So you can open the Jenkinsfile in your IDE (such as IntelliJ IDEA or VS Code), review it, and even modify it if needed.
+
+
+
+In a real-world project, a Jenkinsfile automates the entire CI/CD process. Instead of developers manually building, testing, and deploying an application, Jenkins performs these tasks whenever code is pushed to Git.
+
+A typical Spring Boot + Microservices + Docker + Kubernetes/EKS project pipeline looks like this:
+Developer
+    │
+git push
+    │
+    ▼
+Jenkins Trigger
+    │
+    ▼
+Checkout Code
+    │
+    ▼
+Compile (Maven/Gradle)
+    │
+    ▼
+Run Unit Tests (JUnit/Mockito)
+    │
+    ▼
+Static Code Analysis (SonarQube)
+    │
+    ▼
+Security Scan (optional)
+    │
+    ▼
+Package (JAR)
+    │
+    ▼
+Build Docker Image
+    │
+    ▼
+Push Docker Image to Registry
+    │
+    ▼
+Deploy to Kubernetes/EKS
+
+
+pipeline {
+    agent any // The agent tells Jenkins where to run the pipeline (which Jenkins node or executor).agent any → Run on any available Jenkins agent/node.
+
+    tools {
+        jdk 'JDK21'
+        maven 'Maven-3.9'
+    }
+
+    environment {
+        IMAGE_NAME = "my-springboot-app"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        DOCKER_REPO = "dockerhub-user"
+        REGISTRY_CREDENTIALS = "dockerhub-creds"
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/company/springboot-app.git'
+            }
+        }
+
+        stage('Compile') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh 'mvn org.owasp:dependency-check-maven:check'
+            }
+        }
+
+        stage('Package JAR') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                    docker build \
+                    -t ${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG} .
+                """
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry(credentialsId: REGISTRY_CREDENTIALS) {
+                    sh "docker push ${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh """
+                    kubectl set image deployment/springboot-app \
+                    springboot-app=${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo "Pipeline completed successfully."
+        }
+
+        failure {
+            echo "Pipeline failed."
+        }
+
+        always {
+            cleanWs()
+        }
+    }
+}
+
+
+1. Configure tools in Jenkins
+
+In Jenkins UI:
+Manage Jenkins → Global Tool Configuration
+Add a JDK named JDK21.
+Add Maven named Maven-3.9.
+
+
+stage('Deploy to OpenShift') {
+    steps {
+        sh '''
+            oc login https://api.openshift.company.com \
+                --token=$OPENSHIFT_TOKEN
+
+            oc project dev
+
+            oc set image deployment/employee-service \
+                employee-service=myregistry/employee-service:${BUILD_NUMBER}
+
+            oc rollout status deployment/employee-service
+        '''
+    }
+}
+
+What is oc?
+
+oc is the OpenShift CLI, similar to how kubectl is the Kubernetes CLI.
+
+
+
+Yes. OpenShift also has nodes, just like Kubernetes and Amazon EKS.
+
+An OpenShift cluster consists of:
+
+1) Control Plane (Master Nodes)
+2) Worker Nodes
+
+Architecture
+
+                OpenShift Cluster
+       ┌──────────────────────────────┐
+       │ Control Plane (Master Nodes) │
+       │ - API Server                 │
+       │ - Scheduler                  │
+       │ - Controller Manager         │
+       │ - etcd                       │
+       └──────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        │                       │
+  Worker Node 1           Worker Node 2
+        │                       │
+      Pod A                  Pod B
+(Spring Boot App)      (Spring Boot App)
+
+
+For example:
+
+Worker Node 1
+--------------
+Pod
+ └── employee-service
+
+Pod
+ └── billing-service
+
+Pod
+ └── kafka-consumer
